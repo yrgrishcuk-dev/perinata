@@ -45,6 +45,11 @@ app:
     username: ${TELEGRAM_BOT_USERNAME:}
     webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
     init-data-max-age-seconds: ${TELEGRAM_INIT_DATA_MAX_AGE:3600}
+  max:
+    token: ${MAX_BOT_TOKEN:}
+    username: ${MAX_BOT_USERNAME:}
+    webhook-secret: ${MAX_WEBHOOK_SECRET:}
+    api-base-url: ${MAX_API_BASE_URL:https://platform-api2.max.ru}
 
 management:
   endpoints:

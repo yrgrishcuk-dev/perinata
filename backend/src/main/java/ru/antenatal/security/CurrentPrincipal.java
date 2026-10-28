@@ -17,6 +17,10 @@ public record CurrentPrincipal(PrincipalType type, Long principalId, String exte
         return type == PrincipalType.TELEGRAM;
     }
 
+    public boolean isMax() {
+        return type == PrincipalType.MAX;
+    }
+
     public Long requireDoctorId() {
         if (principalId == null || (type != PrincipalType.DOCTOR && type != PrincipalType.ADMIN)) {
             throw ApiException.forbidden("Требуется вход врача");
@@ -34,6 +38,13 @@ public record CurrentPrincipal(PrincipalType type, Long principalId, String exte
     public String requireTelegramId() {
         if (externalId == null || type != PrincipalType.TELEGRAM) {
             throw ApiException.forbidden("Требуется вход через Telegram");
+        }
+        return externalId;
+    }
+
+    public String requireMessengerId() {
+        if (externalId == null || (type != PrincipalType.TELEGRAM && type != PrincipalType.MAX)) {
+            throw ApiException.forbidden("Требуется вход через мессенджер");
         }
         return externalId;
     }

@@ -1,4 +1,5 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { PatientProvider, StaffProvider } from "./session";
 import MiniLayout from "./mini/MiniLayout";
 import ConnectPage from "./mini/ConnectPage";
@@ -19,6 +20,7 @@ import PatientPage from "./cabinet/PatientPage";
 import AlertsPage from "./cabinet/AlertsPage";
 import AdminPage from "./cabinet/AdminPage";
 import AuditPage from "./cabinet/AuditPage";
+import { startParam } from "./telegram";
 
 function NotFound() {
   return (
@@ -35,9 +37,37 @@ function NotFound() {
   );
 }
 
+function StartParamRedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const param = startParam();
+    if (!param) {
+      return;
+    }
+    const key = `messenger.start.${param}`;
+    try {
+      if (sessionStorage.getItem(key)) {
+        return;
+      }
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // sessionStorage может быть недоступен
+    }
+    if (location.pathname !== "/invite") {
+      navigate(`/invite?t=${encodeURIComponent(param)}`, { replace: true });
+    }
+  }, [navigate, location.pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
-    <Routes>
+    <>
+      <StartParamRedirect />
+      <Routes>
       <Route path="/" element={<Navigate to="/app" replace />} />
 
       <Route
@@ -107,6 +137,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

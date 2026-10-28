@@ -44,7 +44,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/patient/session",
+                                "/api/patient/session/max",
                                 "/api/telegram/webhook/**",
+                                "/api/max/webhook/**",
                                 "/api/public/**",
                                 "/api/dev/**",
                                 "/l/**",
@@ -59,7 +61,7 @@ public class SecurityConfig {
                                 "/favicon.ico").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
-                        .requestMatchers("/api/patient/**").hasRole("TELEGRAM")
+                        .requestMatchers("/api/patient/**").hasAnyRole("TELEGRAM", "MAX")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions

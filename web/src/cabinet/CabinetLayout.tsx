@@ -9,6 +9,7 @@ export default function CabinetLayout() {
   const { me, loading, logout, token } = useStaff();
   const navigate = useNavigate();
   const [messenger, setMessenger] = useState<MessengerLinkResponse | null>(null);
+  const [messengerPlatform, setMessengerPlatform] = useState<"TELEGRAM" | "MAX">("TELEGRAM");
   const [error, setError] = useState<string | null>(null);
 
   if (loading) {
@@ -22,15 +23,16 @@ export default function CabinetLayout() {
     return <Navigate to="/cabinet/login" replace />;
   }
 
-  const connectMessenger = async () => {
+  const connectMessenger = async (platform: "TELEGRAM" | "MAX") => {
     if (!token) {
       return;
     }
+    setMessengerPlatform(platform);
     try {
-      const data = await request<MessengerLinkResponse>("/api/doctor/messenger-link", {
-        method: "POST",
-        token
-      });
+      const data = await request<MessengerLinkResponse>(
+        `/api/doctor/messenger-link?platform=${platform}`,
+        { method: "POST", token }
+      );
       setMessenger(data);
       setError(null);
     } catch (e) {
@@ -89,8 +91,11 @@ export default function CabinetLayout() {
             <span className={`badge ${me.role === "ADMIN" ? "warn" : "neutral"}`}>
               {me.role === "ADMIN" ? "Админ" : "Врач"}
             </span>
-            <button className="btn btn-sm" onClick={() => void connectMessenger()}>
-              Уведомления в Telegram
+            <button className="btn btn-sm" onClick={() => void connectMessenger("TELEGRAM")}>
+              Telegram
+            </button>
+            <button className="btn btn-sm" onClick={() => void connectMessenger("MAX")}>
+              MAX
             </button>
           </div>
         </header>
@@ -104,7 +109,7 @@ export default function CabinetLayout() {
       {messenger ? (
         <div className="modal-backdrop" onClick={() => setMessenger(null)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h2>Уведомления в Telegram</h2>
+            <h2>Уведомления в {messengerPlatform === "MAX" ? "MAX" : "Telegram"}</h2>
             <p className="muted mt">
               {messenger.linked
                 ? "Уведомления уже подключены. Новая ссылка заменит текущую привязку."
@@ -117,7 +122,7 @@ export default function CabinetLayout() {
             </div>
             <div className="row mt">
               <a className="btn btn-primary" href={messenger.url} target="_blank" rel="noreferrer">
-                Открыть Telegram
+                Открыть {messengerPlatform === "MAX" ? "MAX" : "Telegram"}
               </a>
               <button
                 className="btn"

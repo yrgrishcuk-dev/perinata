@@ -70,10 +70,21 @@ public class LinkService {
     }
 
     @Transactional
-    public DoctorMessengerResponse createDoctorLink(Doctor doctor) {
-        String username = appProperties.getBot().getUsername();
-        if (username == null || username.isBlank()) {
-            throw ApiException.badRequest("Не задан TELEGRAM_BOT_USERNAME");
+    public DoctorMessengerResponse createDoctorLink(Doctor doctor, Platform platform) {
+        String username;
+        String baseUrl;
+        if (platform == Platform.MAX) {
+            username = appProperties.getMax().getUsername();
+            baseUrl = "https://max.ru/";
+            if (username == null || username.isBlank()) {
+                throw ApiException.badRequest("Не задан MAX_BOT_USERNAME");
+            }
+        } else {
+            username = appProperties.getBot().getUsername();
+            baseUrl = "https://t.me/";
+            if (username == null || username.isBlank()) {
+                throw ApiException.badRequest("Не задан TELEGRAM_BOT_USERNAME");
+            }
         }
         doctorLinkTokenRepository.findByDoctorIdAndUsedAtIsNull(doctor.getId())
                 .forEach(old -> {
@@ -90,19 +101,19 @@ public class LinkService {
 
         boolean linked = doctorMessengerRepository
                 .findByDoctorIdAndRevokedAtIsNull(doctor.getId()).isPresent();
-        String url = "https://t.me/" + username + "?start=dr_" + raw;
+        String url = baseUrl + username + "?start=dr_" + raw;
         return new DoctorMessengerResponse(url, linked);
     }
 
     @Transactional(readOnly = true)
-    public InvitePreviewResponse preview(String rawToken, String telegramId) {
+    public InvitePreviewResponse preview(String rawToken, Platform platform, String platformUserId) {
         LinkToken token = requireValidToken(rawToken);
         PatientCard card = patientCardRepository.findById(token.getPatientCardId())
                 .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));
         Doctor doctor = doctorRepository.findById(card.getDoctorId()).orElse(null);
 
         PatientAccount existing = patientAccountRepository
-                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(Platform.TELEGRAM, telegramId)
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId)
                 .orElse(null);
         boolean boundToThis = existing != null && existing.getPatientCardId().equals(card.getId());
         boolean boundToOther = existing != null && !existing.getPatientCardId().equals(card.getId());
@@ -117,7 +128,8 @@ public class LinkService {
     }
 
     @Transactional
-    public PatientCard confirm(String rawToken, String telegramId, boolean consent) {
+    public PatientCard confirm(String rawToken, Platform platform, String platformUserId,
+                               String chatId, boolean consent) {
         if (!consent) {
             throw ApiException.badRequest("Нужно согласие на обработку данных");
         }
@@ -128,14 +140,14 @@ public class LinkService {
             throw ApiException.badRequest("Наблюдение завершено");
         }
 
-        Optional<PatientAccount> byTelegram = patientAccountRepository
-                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(Platform.TELEGRAM, telegramId);
-        if (byTelegram.isPresent()) {
-            if (byTelegram.get().getPatientCardId().equals(card.getId())) {
+        Optional<PatientAccount> byMessenger = patientAccountRepository
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId);
+        if (byMessenger.isPresent()) {
+            if (byMessenger.get().getPatientCardId().equals(card.getId())) {
                 markUsed(token);
                 return card;
             }
-            throw ApiException.conflict("Этот Telegram уже привязан к другой карточке");
+            throw ApiException.conflict("Этот аккаунт уже привязан к другой карточке");
         }
 
         Optional<PatientAccount> byCard = patientAccountRepository
@@ -146,21 +158,23 @@ public class LinkService {
 
         PatientAccount account = new PatientAccount();
         account.setPatientCardId(card.getId());
-        account.setPlatform(Platform.TELEGRAM);
-        account.setPlatformUserId(telegramId);
-        account.setChatId(telegramId);
+        account.setPlatform(platform);
+        account.setPlatformUserId(platformUserId);
+        account.setChatId(chatId);
         account.setConsentVersion(CONSENT_VERSION);
         account.setConsentAt(Instant.now());
         patientAccountRepository.save(account);
         markUsed(token);
 
-        auditService.log("PATIENT", telegramId, "BINDING_CONFIRM",
-                "PATIENT_CARD", String.valueOf(card.getId()), "consent=" + CONSENT_VERSION);
+        auditService.log("PATIENT", platformUserId, "BINDING_CONFIRM",
+                "PATIENT_CARD", String.valueOf(card.getId()),
+                "consent=" + CONSENT_VERSION + ",platform=" + platform);
         return card;
     }
 
     @Transactional
-    public Doctor confirmDoctorLink(String rawToken, String chatId, String platformUserId) {
+    public Doctor confirmDoctorLink(String rawToken, Platform platform, String chatId,
+                                    String platformUserId) {
         DoctorLinkToken token = doctorLinkTokenRepository.findByTokenHash(TokenUtil.sha256(rawToken))
                 .orElseThrow(() -> ApiException.unauthorized("Ссылка недействительна"));
         if (token.getUsedAt() != null || token.getExpiresAt().isBefore(Instant.now())) {
@@ -177,7 +191,7 @@ public class LinkService {
 
         DoctorMessenger messenger = new DoctorMessenger();
         messenger.setDoctorId(doctor.getId());
-        messenger.setPlatform(Platform.TELEGRAM);
+        messenger.setPlatform(platform);
         messenger.setPlatformUserId(platformUserId);
         messenger.setChatId(chatId);
         doctorMessengerRepository.save(messenger);
@@ -185,7 +199,8 @@ public class LinkService {
         token.setUsedAt(Instant.now());
         doctorLinkTokenRepository.save(token);
         auditService.log("DOCTOR", String.valueOf(doctor.getId()),
-                "MESSENGER_LINK", "DOCTOR", String.valueOf(doctor.getId()), null);
+                "MESSENGER_LINK", "DOCTOR", String.valueOf(doctor.getId()),
+                "platform=" + platform);
         return doctor;
     }
 

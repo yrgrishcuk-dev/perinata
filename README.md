@@ -1,6 +1,6 @@
 # Антенатальный помощник
 
-Пилотный MVP персонального помощника для беременных: Telegram-бот + мини-приложение для пациентки и веб-кабинет для врача. Одна организация, данные в PostgreSQL, развёртывание в российском облаке.
+Пилотный MVP персонального помощника для беременных: бот и мини-приложение в Telegram и MAX, веб-кабинет для врача. Одна организация, данные в PostgreSQL, развёртывание в российском облаке.
 
 Реализовано по плану `1793021522670-antenatal-assistant-telegram-mvp.md`.
 
@@ -20,7 +20,7 @@
 - создаёт карточки пациенток вручную (ФИО, возраст, ПДР, рост, вес);
 - генерирует QR для привязки и отзывает привязку;
 - видит график прибавки веса, дневник, анкеты, схватки;
-- получает нейтральные уведомления в Telegram и разбирает события в кабинете;
+- получает нейтральные уведомления в Telegram или MAX и разбирает события в кабинете;
 - настраивает пороги АД и глюкозы для конкретной пациентки;
 - ведёт переписку с пациенткой.
 
@@ -33,12 +33,13 @@
 - Backend: Java 21, Spring Boot 3.3, Spring Security, Spring Data JPA, Flyway, PostgreSQL 16.
 - Frontend: React 18, TypeScript, Vite, React Router.
 - Telegram: Bot API, WebApp, deep links.
+- MAX: Bot API `platform-api2.max.ru`, MAX Bridge, deep links, webhook.
 - Деплой: Docker Compose, Caddy (TLS), ежедневный `pg_dump`.
 
 ## Структура
 
 ```
-backend/   Spring Boot API, Telegram, планировщик
+backend/   Spring Boot API, Telegram, MAX, планировщик
 web/       React SPA: мини-приложение и кабинет
 deploy/    Caddyfile, backup.sh
 docs/      клинические пороги и чек-лист согласования
@@ -156,11 +157,46 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setChatMenuButton" \
 curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 ```
 
+## Настройка MAX
+
+1. Зарегистрируйте профиль организации, ИП или самозанятого в [MAX для партнёров](https://business.max.ru/self) — нужен резидент РФ.
+2. Создайте бота и получите токен и username (без `@`).
+3. В настройках бота укажите URL мини-приложения:
+   ```
+   https://<ДОМЕН>/app
+   ```
+   Выберите кнопку открытия «Открыть» и сохраните.
+4. Заполните в `.env`:
+   ```dotenv
+   MAX_BOT_TOKEN=<токен>
+   MAX_BOT_USERNAME=<username без @>
+   MAX_WEBHOOK_SECRET=<случайная hex-строка>
+   MAX_API_BASE_URL=https://platform-api2.max.ru
+   ```
+5. Перезапустите приложение:
+   ```bash
+   docker compose up -d
+   ```
+6. Подпишитесь на обновления:
+   ```bash
+   curl -X POST "https://platform-api2.max.ru/subscriptions" \
+     -H "Authorization: <MAX_BOT_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{"url":"https://<ДОМЕН>/api/max/webhook/<MAX_WEBHOOK_SECRET>","update_types":["message_created","bot_started"],"secret":"<MAX_WEBHOOK_SECRET>"}'
+   ```
+7. Проверьте подписки:
+   ```bash
+   curl "https://platform-api2.max.ru/subscriptions" -H "Authorization: <MAX_BOT_TOKEN>"
+   ```
+8. Откройте бота в MAX, нажмите Start или отправьте `/start`. Для привязки пациентки можно использовать тот же QR: лендинг предложит Telegram и MAX.
+
+Мини-приложение MAX должно быть доступно по HTTPS. MAX Bridge подключается в `web/index.html`; данные `initData` проверяются на бэкенде по HMAC-SHA256 с токеном MAX-бота. Бот проходит модерацию MAX; до этого он может быть недоступен другим пользователям.
+
 ## Как работает привязка
 
 1. Врач создаёт карточку и нажимает «QR для привязки».
 2. Бэкенд выпускает одноразовый токен (TTL 15 минут, хранится SHA-256).
-3. QR ведёт на `https://<домен>/l/<token>`; страница не содержит ПДн и перенаправляет в Telegram.
+3. QR ведёт на `https://<домен>/l/<token>`; страница не содержит ПДн и предлагает открыть Telegram или MAX.
 4. Бот получает `/start <token>` и открывает мини-приложение с приглашением.
 5. Пациентка видит ФИО, возраст и ПДР, подтверждает согласие.
 6. Создаётся привязка; токен гасится.
@@ -172,7 +208,9 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 Публичное:
 - `GET /l/{token}` — landing для QR;
 - `POST /api/telegram/webhook/{secret}` — webhook Telegram;
-- `POST /api/patient/session` — обмен Telegram `initData` на токен.
+- `POST /api/max/webhook/{secret}` — webhook MAX;
+- `POST /api/patient/session` — обмен Telegram `initData` на токен;
+- `POST /api/patient/session/max` — обмен MAX `initData` на токен.
 
 Пациентка (Bearer):
 - `GET /api/patient/me`, `GET /api/patient/profile`;
@@ -247,7 +285,7 @@ mvn test
 
 ## Ограничения MVP
 
-- MAX не реализован: код использует `Platform` и `TelegramClient`; для MAX потребуется отдельный адаптер доставки.
+- MAX реализован на уровне бота, мини-приложения, привязки и уведомлений. Для запуска нужен профиль организации/ИП/самозанятого в MAX, созданный бот, настроенный URL мини-приложения и webhook. Без этих данных MAX-функции выключены.
 - Нет круглосуточной дежурной смены и SLA; пациентка всегда получает 103/112.
 - Контент по неделям и рационы — демонстрационные, требуют замены на утверждённые клиникой.
 - Нет интеграции с МИС/ЕГИСЗ.

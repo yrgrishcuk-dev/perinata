@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.antenatal.domain.AlarmStatus;
 import ru.antenatal.domain.Doctor;
 import ru.antenatal.domain.PatientCard;
+import ru.antenatal.domain.Platform;
 import ru.antenatal.security.CurrentPrincipal;
 import ru.antenatal.service.AlertService;
 import ru.antenatal.service.DiaryService;
@@ -218,8 +219,10 @@ public class DoctorController {
     }
 
     @PostMapping("/messenger-link")
-    public DoctorMessengerResponse messengerLink(@AuthenticationPrincipal CurrentPrincipal principal) {
+    public DoctorMessengerResponse messengerLink(@AuthenticationPrincipal CurrentPrincipal principal,
+                                                 @RequestParam(required = false) Platform platform) {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
-        return linkService.createDoctorLink(doctor);
+        return linkService.createDoctorLink(doctor,
+                platform == null ? Platform.TELEGRAM : platform);
     }
 }

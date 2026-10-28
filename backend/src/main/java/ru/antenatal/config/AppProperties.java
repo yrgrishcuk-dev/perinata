@@ -18,6 +18,7 @@ public class AppProperties {
     private String adminEmail = "";
     private String adminPassword = "";
     private Bot bot = new Bot();
+    private Max max = new Max();
 
     @Getter
     @Setter
@@ -26,5 +27,14 @@ public class AppProperties {
         private String username = "";
         private String webhookSecret = "";
         private long initDataMaxAgeSeconds = 3600;
+    }
+
+    @Getter
+    @Setter
+    public static class Max {
+        private String token = "";
+        private String username = "";
+        private String webhookSecret = "";
+        private String apiBaseUrl = "https://platform-api2.max.ru";
     }
 }

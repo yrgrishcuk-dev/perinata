@@ -38,15 +38,13 @@ public class NotificationService {
 
     public void notifyDoctor(PatientCard card, String text, String dedupeKey) {
         doctorMessengerRepository.findByDoctorIdAndRevokedAtIsNull(card.getDoctorId())
-                .filter(link -> link.getPlatform() == Platform.TELEGRAM)
-                .ifPresent(link -> enqueue(Platform.TELEGRAM, NotificationRecipientType.DOCTOR,
+                .ifPresent(link -> enqueue(link.getPlatform(), NotificationRecipientType.DOCTOR,
                         card.getDoctorId(), link.getChatId(), text, dedupeKey));
     }
 
     public void notifyPatient(PatientCard card, String text, String dedupeKey) {
         patientAccountRepository.findByPatientCardIdAndRevokedAtIsNull(card.getId())
-                .filter(account -> account.getPlatform() == Platform.TELEGRAM)
-                .ifPresent(account -> enqueue(Platform.TELEGRAM, NotificationRecipientType.PATIENT,
+                .ifPresent(account -> enqueue(account.getPlatform(), NotificationRecipientType.PATIENT,
                         card.getId(), account.getChatId(), text, dedupeKey));
     }
 }

@@ -31,18 +31,25 @@ public class InitDataValidator {
     }
 
     public TelegramUser validate(String initData) {
-        String botToken = appProperties.getBot().getToken();
+        return validate(initData, appProperties.getBot().getToken(), "Telegram-бот не настроен");
+    }
+
+    public TelegramUser validateMax(String initData) {
+        return validate(initData, appProperties.getMax().getToken(), "MAX-бот не настроен");
+    }
+
+    private TelegramUser validate(String initData, String botToken, String notConfiguredMessage) {
         if (botToken == null || botToken.isBlank()) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Telegram-бот не настроен");
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, notConfiguredMessage);
         }
         if (initData == null || initData.isBlank()) {
-            throw ApiException.unauthorized("Нет данных Telegram");
+            throw ApiException.unauthorized("Нет данных мессенджера");
         }
 
         Map<String, String> data = parse(initData);
         String hash = data.remove("hash");
         if (hash == null || hash.isBlank()) {
-            throw ApiException.unauthorized("Некорректные данные Telegram");
+            throw ApiException.unauthorized("Некорректные данные мессенджера");
         }
 
         String dataCheckString = data.entrySet().stream()
@@ -57,7 +64,7 @@ public class InitDataValidator {
                 dataCheckString.getBytes(StandardCharsets.UTF_8)));
 
         if (!TokenUtil.constantTimeEquals(computed, hash)) {
-            throw ApiException.unauthorized("Подпись Telegram неверна");
+            throw ApiException.unauthorized("Подпись мессенджера неверна");
         }
 
         String authDate = data.get("auth_date");
@@ -66,23 +73,23 @@ public class InitDataValidator {
             try {
                 timestamp = Long.parseLong(authDate);
             } catch (NumberFormatException e) {
-                throw ApiException.unauthorized("Некорректная дата Telegram");
+                throw ApiException.unauthorized("Некорректная дата мессенджера");
             }
             long age = Instant.now().getEpochSecond() - timestamp;
             if (age < 0 || age > appProperties.getBot().getInitDataMaxAgeSeconds()) {
-                throw ApiException.unauthorized("Сессия Telegram устарела");
+                throw ApiException.unauthorized("Сессия мессенджера устарела");
             }
         }
 
         String userJson = data.get("user");
         if (userJson == null) {
-            throw ApiException.unauthorized("Нет пользователя Telegram");
+            throw ApiException.unauthorized("Нет пользователя мессенджера");
         }
         try {
             JsonNode node = objectMapper.readTree(userJson);
             String id = node.path("id").asText();
             if (id.isBlank()) {
-                throw ApiException.unauthorized("Нет идентификатора Telegram");
+                throw ApiException.unauthorized("Нет идентификатора мессенджера");
             }
             return new TelegramUser(
                     id,
@@ -91,7 +98,7 @@ public class InitDataValidator {
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            throw ApiException.unauthorized("Некорректный пользователь Telegram");
+            throw ApiException.unauthorized("Некорректный пользователь мессенджера");
         }
     }
 

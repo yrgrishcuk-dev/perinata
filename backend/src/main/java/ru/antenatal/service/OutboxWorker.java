@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import ru.antenatal.domain.NotificationOutbox;
 import ru.antenatal.domain.NotificationStatus;
 import ru.antenatal.domain.Platform;
+import ru.antenatal.max.MaxClient;
 import ru.antenatal.repo.NotificationOutboxRepository;
 import ru.antenatal.telegram.TelegramClient;
 
@@ -21,6 +22,7 @@ public class OutboxWorker {
 
     private final NotificationOutboxRepository outboxRepository;
     private final TelegramClient telegramClient;
+    private final MaxClient maxClient;
 
     @Scheduled(fixedDelay = 10_000)
     public void process() {
@@ -33,13 +35,17 @@ public class OutboxWorker {
     }
 
     private void processOne(NotificationOutbox item) {
-        if (item.getPlatform() != Platform.TELEGRAM) {
+        boolean sent;
+        if (item.getPlatform() == Platform.TELEGRAM) {
+            sent = telegramClient.sendMessage(item.getChatId(), item.getText(), null);
+        } else if (item.getPlatform() == Platform.MAX) {
+            sent = maxClient.sendMessage(item.getChatId(), item.getText(), null);
+        } else {
             item.setStatus(NotificationStatus.SKIPPED);
             item.setError("Platform not implemented");
             outboxRepository.save(item);
             return;
         }
-        boolean sent = telegramClient.sendMessage(item.getChatId(), item.getText(), null);
         item.setAttempts(item.getAttempts() + 1);
         if (sent) {
             item.setStatus(NotificationStatus.SENT);

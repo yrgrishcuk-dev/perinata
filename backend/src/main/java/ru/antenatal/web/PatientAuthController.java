@@ -28,11 +28,22 @@ public class PatientAuthController {
     @PostMapping("/session")
     public PatientSessionResponse session(@RequestBody PatientSessionRequest request) {
         TelegramUser user = initDataValidator.validate(request.initData());
+        return session(user, Platform.TELEGRAM, PrincipalType.TELEGRAM, "TELEGRAM_USER");
+    }
+
+    @PostMapping("/session/max")
+    public PatientSessionResponse sessionMax(@RequestBody PatientSessionRequest request) {
+        TelegramUser user = initDataValidator.validateMax(request.initData());
+        return session(user, Platform.MAX, PrincipalType.MAX, "MAX_USER");
+    }
+
+    private PatientSessionResponse session(TelegramUser user, Platform platform,
+                                           PrincipalType principalType, String entityType) {
         boolean bound = patientAccountRepository
-                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(Platform.TELEGRAM, user.id())
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, user.id())
                 .isPresent();
-        String token = authService.createSession(PrincipalType.TELEGRAM, user.id());
-        auditService.log("PATIENT", user.id(), "SESSION", "TELEGRAM_USER", user.id(), null);
+        String token = authService.createSession(principalType, user.id());
+        auditService.log("PATIENT", user.id(), "SESSION", entityType, user.id(), null);
         return new PatientSessionResponse(token, bound);
     }
 }

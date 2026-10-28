@@ -9,23 +9,44 @@ export function telegram() {
   return window.Telegram?.WebApp ?? null;
 }
 
+export function maxApp() {
+  return window.WebApp ?? null;
+}
+
 export function initTelegram(): void {
   const app = telegram();
-  if (!app) {
-    return;
+  if (app) {
+    app.ready();
+    app.expand();
+    try {
+      app.setHeaderColor?.("#f6f7f9");
+    } catch {
+      // старые клиенты Telegram могут не поддерживать метод
+    }
   }
-  app.ready();
-  app.expand();
   try {
-    app.setHeaderColor?.("#f6f7f9");
+    maxApp()?.BackButton?.hide();
   } catch {
-    // старые клиенты Telegram могут не поддерживать метод
+    // MAX Bridge может быть недоступен вне клиента
   }
 }
 
 export function startParam(): string {
-  const app = telegram();
-  return app?.initDataUnsafe?.start_param ?? "";
+  const maxParam = maxApp()?.initDataUnsafe?.start_param;
+  if (maxParam) {
+    return maxParam;
+  }
+  const telegramParam = telegram()?.initDataUnsafe?.start_param;
+  return telegramParam ?? "";
+}
+
+async function openSession(path: string, initData: string): Promise<string> {
+  const session = await request<PatientSession>(path, {
+    method: "POST",
+    body: { initData }
+  });
+  setPatientToken(session.token);
+  return session.token;
 }
 
 export async function ensurePatientToken(): Promise<string> {
@@ -34,29 +55,29 @@ export async function ensurePatientToken(): Promise<string> {
     return existing;
   }
 
-  const initData = telegram()?.initData ?? "";
+  const maxInitData = maxApp()?.initData ?? "";
+  if (maxInitData) {
+    return openSession("/api/patient/session/max", maxInitData);
+  }
+
+  const telegramInitData = telegram()?.initData ?? "";
+  if (telegramInitData) {
+    return openSession("/api/patient/session", telegramInitData);
+  }
+
   try {
-    const session = await request<PatientSession>("/api/patient/session", {
-      method: "POST",
-      body: { initData }
-    });
-    setPatientToken(session.token);
-    return session.token;
+    return await openSession("/api/patient/session", "");
   } catch (error) {
-    if (error instanceof ApiError && error.status >= 500) {
-      // ниже попробуем dev-режим
+    if (!(error instanceof ApiError)) {
+      throw error;
     }
   }
 
   try {
-    const session = await request<PatientSession>("/api/dev/patient-session", {
-      method: "POST"
-    });
-    setPatientToken(session.token);
-    return session.token;
+    return await openSession("/api/dev/patient-session", "");
   } catch {
     throw new Error(
-      "Не удалось открыть приложение. Откройте его из Telegram или включите DEV_MODE."
+      "Не удалось открыть приложение. Откройте его из Telegram или MAX."
     );
   }
 }

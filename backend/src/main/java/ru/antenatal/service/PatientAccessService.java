@@ -8,6 +8,7 @@ import ru.antenatal.domain.PatientAccount;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.PatientStatus;
 import ru.antenatal.domain.Platform;
+import ru.antenatal.domain.PrincipalType;
 import ru.antenatal.repo.PatientAccountRepository;
 import ru.antenatal.repo.PatientCardRepository;
 import ru.antenatal.security.CurrentPrincipal;
@@ -22,11 +23,22 @@ public class PatientAccessService {
     public record PatientContext(PatientCard card, PatientAccount account) {
     }
 
+    public Platform platformOf(CurrentPrincipal principal) {
+        if (principal.type() == PrincipalType.MAX) {
+            return Platform.MAX;
+        }
+        if (principal.type() == PrincipalType.TELEGRAM) {
+            return Platform.TELEGRAM;
+        }
+        throw ApiException.forbidden("Требуется вход через мессенджер");
+    }
+
     @Transactional(readOnly = true)
     public PatientContext requireContext(CurrentPrincipal principal) {
-        String telegramId = principal.requireTelegramId();
+        String messengerId = principal.requireMessengerId();
+        Platform platform = platformOf(principal);
         PatientAccount account = patientAccountRepository
-                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(Platform.TELEGRAM, telegramId)
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, messengerId)
                 .orElseThrow(() -> ApiException.conflict("Карточка ещё не привязана"));
         PatientCard card = patientCardRepository.findById(account.getPatientCardId())
                 .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));

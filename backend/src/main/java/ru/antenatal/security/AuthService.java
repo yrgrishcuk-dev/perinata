@@ -41,7 +41,8 @@ public class AuthService {
         return authSessionRepository.findByTokenHashAndExpiresAtAfter(
                         TokenUtil.sha256(rawToken), Instant.now())
                 .map(session -> {
-                    if (session.getPrincipalType() == PrincipalType.TELEGRAM) {
+                    if (session.getPrincipalType() == PrincipalType.TELEGRAM
+                            || session.getPrincipalType() == PrincipalType.MAX) {
                         return new CurrentPrincipal(session.getPrincipalType(), null, session.getPrincipalId());
                     }
                     return new CurrentPrincipal(session.getPrincipalType(), Long.valueOf(session.getPrincipalId()), null);
@@ -79,7 +80,7 @@ public class AuthService {
     private Duration ttl(PrincipalType type) {
         return switch (type) {
             case DOCTOR, ADMIN -> Duration.ofHours(12);
-            case TELEGRAM -> Duration.ofDays(30);
+            case TELEGRAM, MAX -> Duration.ofDays(30);
         };
     }
 }

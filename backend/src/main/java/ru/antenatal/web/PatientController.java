@@ -79,9 +79,10 @@ public class PatientController {
 
     @GetMapping("/me")
     public PatientMeResponse me(@AuthenticationPrincipal CurrentPrincipal principal) {
-        String telegramId = principal.requireTelegramId();
+        String messengerId = principal.requireMessengerId();
+        Platform platform = patientAccessService.platformOf(principal);
         Optional<PatientAccount> account = patientAccountRepository
-                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(Platform.TELEGRAM, telegramId);
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, messengerId);
         if (account.isEmpty()) {
             return new PatientMeResponse(false, null);
         }
@@ -95,14 +96,17 @@ public class PatientController {
     @GetMapping("/invite/{token}")
     public InvitePreviewResponse preview(@AuthenticationPrincipal CurrentPrincipal principal,
                                          @PathVariable String token) {
-        return linkService.preview(token, principal.requireTelegramId());
+        return linkService.preview(token, patientAccessService.platformOf(principal),
+                principal.requireMessengerId());
     }
 
     @PostMapping("/invite/{token}/confirm")
     public InviteConfirmResponse confirm(@AuthenticationPrincipal CurrentPrincipal principal,
                                          @PathVariable String token,
                                          @RequestBody InviteConfirmRequest request) {
-        PatientCard card = linkService.confirm(token, principal.requireTelegramId(), request.consent());
+        String messengerId = principal.requireMessengerId();
+        PatientCard card = linkService.confirm(token, patientAccessService.platformOf(principal),
+                messengerId, messengerId, request.consent());
         return new InviteConfirmResponse(true, patientCardService.summary(card));
     }
 
@@ -229,7 +233,7 @@ public class PatientController {
     public void revokeConsent(@AuthenticationPrincipal CurrentPrincipal principal) {
         PatientAccessService.PatientContext context = patientAccessService.requireContext(principal);
         patientAccessService.revokeConsent(context.account());
-        auditService.log("PATIENT", principal.requireTelegramId(),
+        auditService.log("PATIENT", principal.requireMessengerId(),
                 "CONSENT_REVOKE", "PATIENT_CARD",
                 String.valueOf(context.card().getId()), null);
     }

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.antenatal.config.AppProperties;
 import ru.antenatal.domain.LinkToken;
+import ru.antenatal.domain.Platform;
 import ru.antenatal.service.LinkService;
 
 import java.util.Optional;
@@ -57,7 +58,7 @@ public class TelegramUpdateHandler {
 
     private void handleDoctorLink(String chatId, String fromId, String rawToken) {
         try {
-            linkService.confirmDoctorLink(rawToken, chatId, fromId);
+            linkService.confirmDoctorLink(rawToken, Platform.TELEGRAM, chatId, fromId);
             telegramClient.sendMessage(chatId,
                     "Уведомления подключены. События по вашим пациенткам будут приходить сюда.",
                     null);

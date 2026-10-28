@@ -32,6 +32,7 @@ public class AuthFilter extends OncePerRequestFilter {
                     case ADMIN -> List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
                     case DOCTOR -> List.of(new SimpleGrantedAuthority("ROLE_DOCTOR"));
                     case TELEGRAM -> List.of(new SimpleGrantedAuthority("ROLE_TELEGRAM"));
+                    case MAX -> List.of(new SimpleGrantedAuthority("ROLE_MAX"));
                 };
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(principal, null, authorities);
