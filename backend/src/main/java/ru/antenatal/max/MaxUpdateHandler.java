@@ -45,7 +45,7 @@ public class MaxUpdateHandler {
         }
         if (payload.startsWith("dr_")) {
             try {
-                linkService.confirmDoctorLink(payload.substring(3), Platform.MAX, chatId, userId);
+                linkService.confirmDoctorLink(payload.substring(3), Platform.MAX, userId, userId);
                 maxClient.sendMessage(userId,
                         "Уведомления подключены. События по вашим пациенткам будут приходить сюда.",
                         null);
