@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ErrorBox } from "../components/ui";
+import { PasswordInput } from "../components/PasswordInput";
 import { request } from "../api";
 import { useStaff } from "../session";
 
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [mustChange, setMustChange] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [tokenAfterLogin, setTokenAfterLogin] = useState<string | null>(null);
 
   if (me && !mustChange) {
@@ -43,6 +45,14 @@ export default function LoginPage() {
     if (!tokenAfterLogin) {
       return;
     }
+    if (newPassword.length < 8) {
+      setError("Пароль должен быть не короче 8 символов");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Пароли не совпадают");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -58,6 +68,10 @@ export default function LoginPage() {
       setBusy(false);
     }
   };
+
+  const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
+  const tooShort = newPassword.length > 0 && newPassword.length < 8;
+  const cannotSave = busy || newPassword.length < 8 || confirmPassword.length < 8 || newPassword !== confirmPassword;
 
   return (
     <div className="shell">
@@ -83,8 +97,8 @@ export default function LoginPage() {
               </label>
               <label className="field">
                 <span>Пароль</span>
-                <input
-                  type="password"
+                <PasswordInput
+                  name="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="current-password"
@@ -104,17 +118,49 @@ export default function LoginPage() {
               </p>
               <label className="field">
                 <span>Новый пароль</span>
-                <input
-                  type="password"
+                <PasswordInput
+                  name="newPassword"
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                    setError(null);
+                  }}
                   minLength={8}
+                  maxLength={72}
                   autoComplete="new-password"
                   required
+                  aria-describedby={tooShort ? "password-too-short" : undefined}
                 />
+                {tooShort ? (
+                  <p id="password-too-short" className="field-hint">
+                    Не короче 8 символов
+                  </p>
+                ) : null}
+              </label>
+              <label className="field">
+                <span>Повторите новый пароль</span>
+                <PasswordInput
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setError(null);
+                  }}
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  required
+                  aria-invalid={mismatch || undefined}
+                  aria-describedby={mismatch ? "password-mismatch" : undefined}
+                />
+                {mismatch ? (
+                  <p id="password-mismatch" className="field-error">
+                    Пароли не совпадают
+                  </p>
+                ) : null}
               </label>
               {error ? <ErrorBox message={error} /> : null}
-              <button className="btn btn-primary btn-block btn-lg" disabled={busy}>
+              <button className="btn btn-primary btn-block btn-lg" disabled={cannotSave}>
                 {busy ? "Сохраняем…" : "Сохранить и продолжить"}
               </button>
             </form>

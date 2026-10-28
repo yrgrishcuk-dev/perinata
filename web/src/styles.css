@@ -1292,3 +1292,51 @@ th {
   }
 }
 
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 46px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.password-toggle:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.password-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.25);
+  color: var(--primary-dark);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.field-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+
