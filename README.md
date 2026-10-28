@@ -177,7 +177,13 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
    ```bash
    docker compose up -d
    ```
-6. Подпишитесь на обновления:
+6. Подпишитесь на обновления. На сервере уже установлены корневой и промежуточный сертификаты Минцифры, поэтому используйте серверный скрипт:
+   ```bash
+   ssh root@<СЕРВЕР> "bash /opt/antenatal/deploy/set-max-webhook.sh"
+   ```
+   Скрипт берёт `MAX_*` из `/opt/antenatal/.env`, ставит webhook и выводит текущие подписки.
+   
+   Альтернатива вручную:
    ```bash
    curl -X POST "https://platform-api2.max.ru/subscriptions" \
      -H "Authorization: <MAX_BOT_TOKEN>" \
@@ -189,6 +195,8 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
    curl "https://platform-api2.max.ru/subscriptions" -H "Authorization: <MAX_BOT_TOKEN>"
    ```
 8. Откройте бота в MAX, нажмите Start или отправьте `/start`. Для привязки пациентки можно использовать тот же QR: лендинг предложит Telegram и MAX.
+
+> MAX API использует сертификаты Минцифры. Они добавлены в `deploy/certs` и в Java truststore Docker-образа; на хосте — в системный truststore. Без этого TLS-соединение к `platform-api2.max.ru` завершается ошибкой проверки сертификата.
 
 Мини-приложение MAX должно быть доступно по HTTPS. MAX Bridge подключается в `web/index.html`; данные `initData` проверяются на бэкенде по HMAC-SHA256 с токеном MAX-бота. Бот проходит модерацию MAX; до этого он может быть недоступен другим пользователям.
 
