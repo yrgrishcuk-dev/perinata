@@ -18,6 +18,8 @@ import DashboardPage from "./cabinet/DashboardPage";
 import PatientsPage from "./cabinet/PatientsPage";
 import PatientPage from "./cabinet/PatientPage";
 import AlertsPage from "./cabinet/AlertsPage";
+import CalendarPage from "./cabinet/CalendarPage";
+import HelpPage from "./cabinet/HelpPage";
 import AdminPage from "./cabinet/AdminPage";
 import AuditPage from "./cabinet/AuditPage";
 import { startParam } from "./telegram";
@@ -131,7 +133,9 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="patients" element={<PatientsPage />} />
         <Route path="patients/:id" element={<PatientPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
         <Route path="alerts" element={<AlertsPage />} />
+        <Route path="help" element={<HelpPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="audit" element={<AuditPage />} />
       </Route>

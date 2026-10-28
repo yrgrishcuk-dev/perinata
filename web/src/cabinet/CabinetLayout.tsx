@@ -53,8 +53,14 @@ export default function CabinetLayout() {
         <NavLink to="/cabinet/patients" className={({ isActive }) => (isActive ? "active" : "")}>
           Пациентки
         </NavLink>
+        <NavLink to="/cabinet/calendar" className={({ isActive }) => (isActive ? "active" : "")}>
+          Календарь ПДР
+        </NavLink>
         <NavLink to="/cabinet/alerts" className={({ isActive }) => (isActive ? "active" : "")}>
           События
+        </NavLink>
+        <NavLink to="/cabinet/help" className={({ isActive }) => (isActive ? "active" : "")}>
+          Обучение
         </NavLink>
         {me.role === "ADMIN" ? (
           <>

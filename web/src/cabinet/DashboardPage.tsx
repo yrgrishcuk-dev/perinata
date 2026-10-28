@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlarmStatusBadge, ErrorBox, RiskBadge, SeverityBadge, Spinner } from "../components/ui";
+import { GettingStartedCard } from "../components/GettingStartedCard";
 import { request } from "../api";
 import { alarmTypeLabel, formatDate, formatDateTime } from "../format";
 import { useStaff } from "../session";
 import type { AlertView, DashboardView, PatientSummary } from "../types";
 
 export default function DashboardPage() {
-  const { token } = useStaff();
+  const { token, me } = useStaff();
   const [dashboard, setDashboard] = useState<DashboardView | null>(null);
   const [alerts, setAlerts] = useState<AlertView[]>([]);
   const [patients, setPatients] = useState<PatientSummary[]>([]);
@@ -82,6 +83,8 @@ export default function DashboardPage() {
           </b>
         </div>
       </div>
+
+      <GettingStartedCard doctorId={me?.id ?? 0} patientsCount={patients.length} />
 
       <div className="card">
         <div className="row between">
