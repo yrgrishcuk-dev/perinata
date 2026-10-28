@@ -1,0 +1,15 @@
+backend/target/
+backend/src/main/resources/static/
+web/node_modules/
+web/dist/
+.env
+scripts/local.secrets.ps1
+scripts/check-secrets.ps1
+scripts/export-telegram-env.ps1
+scripts/send-test-message.ps1
+scripts/read-telegram-updates.ps1
+scripts/test-telegram-java.ps1
+deploy/server-*.sh
+deploy/telegram-poller.py
+deploy/telegram-poller.service
+backup/

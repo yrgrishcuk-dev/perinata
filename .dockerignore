@@ -1,0 +1,9 @@
+.git
+.gitignore
+backend/target
+web/node_modules
+web/dist
+backup
+.env
+*.log
+.idea
