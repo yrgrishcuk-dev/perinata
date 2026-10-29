@@ -22,7 +22,7 @@ public class AlarmEvent extends BaseEntity {
     private Long patientCardId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, length = 32)
     private AlarmType type;
 
     @Enumerated(EnumType.STRING)
