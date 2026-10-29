@@ -39,6 +39,9 @@ public class PatientCard extends BaseEntity {
     @Column(name = "parity")
     private Integer parity;
 
+    @Column(name = "doctor_comment", columnDefinition = "text")
+    private String comment;
+
     @Column(nullable = false)
     private LocalDate edd;
 

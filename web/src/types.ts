@@ -223,6 +223,7 @@ export interface PatientDetails {
   heightCm: number | null;
   prePregnancyWeightKg: number | null;
   reminderTime: string;
+  comment: string | null;
 }
 
 export interface DashboardView {
@@ -292,12 +293,26 @@ export interface PatientCreateInput {
   diabetesType?: DiabetesType;
   diaryRequired?: boolean;
   reminderTime?: string;
+  comment?: string | null;
 }
 
 export type PatientUpdateInput = Partial<PatientCreateInput>;
 
-export interface OnboardingInput {
-  heightCm: number;
-  prePregnancyWeightKg: number;
-  reminderTime?: string;
+export interface CalendarEventView {
+  id: number;
+  date: string;
+  time: string | null;
+  title: string;
+  note: string | null;
+  patientId: number | null;
+  patientName: string | null;
+  patientPublicCode: string | null;
+}
+
+export interface CalendarEventInput {
+  date: string;
+  title: string;
+  time?: string | null;
+  patientId?: number | null;
+  note?: string | null;
 }

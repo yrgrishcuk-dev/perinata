@@ -1,11 +1,10 @@
 import { useEffect } from "react";
-import { Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { PatientProvider, StaffProvider } from "./session";
 import LandingPage from "./landing/LandingPage";
 import MiniLayout from "./mini/MiniLayout";
 import ConnectPage from "./mini/ConnectPage";
 import InvitePage from "./mini/InvitePage";
-import OnboardingPage from "./mini/OnboardingPage";
 import HomePage from "./mini/HomePage";
 import DiaryPage from "./mini/DiaryPage";
 import SymptomsPage from "./mini/SymptomsPage";
@@ -89,14 +88,7 @@ export default function App() {
           </PatientProvider>
         }
       />
-      <Route
-        path="/onboarding"
-        element={
-          <PatientProvider>
-            <OnboardingPage />
-          </PatientProvider>
-        }
-      />
+      <Route path="/onboarding" element={<Navigate to="/app" replace />} />
 
       <Route
         path="/app"

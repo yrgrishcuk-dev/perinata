@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
+import { Counter } from "../components/Counter";
 import { request } from "../api";
 import { formatDate } from "../format";
 import { useStaff } from "../session";
@@ -23,18 +24,20 @@ interface FormState {
   riskGroup: RiskGroup;
   diabetesType: DiabetesType;
   diaryRequired: boolean;
+  comment: string;
 }
 
 const emptyForm = (): FormState => ({
   fullName: "",
   ageYears: "28",
-  parity: "",
+  parity: "1",
   edd: defaultEdd(),
   heightCm: "",
   prePregnancyWeightKg: "",
   riskGroup: "LOW",
   diabetesType: "NONE",
-  diaryRequired: false
+  diaryRequired: true,
+  comment: ""
 });
 
 export default function PatientsPage() {
@@ -99,7 +102,7 @@ export default function PatientsPage() {
       const body: PatientCreateInput = {
         fullName: form.fullName.trim(),
         ageYears: Number(form.ageYears),
-        parity: form.parity ? Number(form.parity) : null,
+        parity: Number(form.parity || "1"),
         edd: form.edd,
         heightCm: form.heightCm ? Number(form.heightCm.replace(",", ".")) : null,
         prePregnancyWeightKg: form.prePregnancyWeightKg
@@ -107,7 +110,8 @@ export default function PatientsPage() {
           : null,
         riskGroup: form.riskGroup,
         diabetesType: form.diabetesType,
-        diaryRequired: form.diaryRequired
+        diaryRequired: form.diaryRequired,
+        comment: form.comment.trim() || null
       };
       const created = await request<PatientSummary>("/api/doctor/patients", {
         method: "POST",
@@ -204,7 +208,7 @@ export default function PatientsPage() {
         <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h2 style={{ marginBottom: 14 }}>Новая карточка</h2>
-            <Field label="ФИО">
+            <Field label="ФИО" hint="Эти данные отобразятся у пациентки в карточке.">
               <input
                 value={form.fullName}
                 onChange={(event) => setForm({ ...form, fullName: event.target.value })}
@@ -219,12 +223,10 @@ export default function PatientsPage() {
                   onChange={(event) => setForm({ ...form, ageYears: event.target.value })}
                 />
               </Field>
-              <Field label="Какие по счёту роды">
-                <input
-                  inputMode="numeric"
+              <Field label="Роды" hint="Какими по счёту будут эти роды.">
+                <Counter
                   value={form.parity}
-                  onChange={(event) => setForm({ ...form, parity: event.target.value })}
-                  placeholder="1"
+                  onChange={(parity) => setForm({ ...form, parity })}
                 />
               </Field>
               <Field label="ПДР">
@@ -234,7 +236,7 @@ export default function PatientsPage() {
                   onChange={(event) => setForm({ ...form, edd: event.target.value })}
                 />
               </Field>
-              <Field label="Рост, см (если известен)">
+              <Field label="Рост, см (если известен)" hint="Заполняется только врачом.">
                 <input
                   inputMode="decimal"
                   value={form.heightCm}
@@ -242,7 +244,7 @@ export default function PatientsPage() {
                   placeholder="165"
                 />
               </Field>
-              <Field label="Вес до беременности, кг">
+              <Field label="Вес до беременности, кг" hint="Заполняется только врачом.">
                 <input
                   inputMode="decimal"
                   value={form.prePregnancyWeightKg}
@@ -292,6 +294,14 @@ export default function PatientsPage() {
                 </select>
               </Field>
             </div>
+            <Field label="Комментарий врача" hint="Виден только врачу.">
+              <textarea
+                value={form.comment}
+                onChange={(event) => setForm({ ...form, comment: event.target.value })}
+                placeholder="Внутренняя заметка по пациентке"
+                maxLength={4000}
+              />
+            </Field>
             <p className="notice" style={{ marginBottom: 12 }}>
               Время напоминания о дневнике и пороги настраиваются в карточке пациентки после
               создания.

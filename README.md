@@ -8,7 +8,7 @@
 
 Пациентка:
 - привязывается к карточке по одноразовому QR-коду врача;
-- вводит рост и вес до беременности, получает ИМТ и коридор прибавки;
+- видит ИМТ и коридор прибавки, которые рассчитаны по росту и весу, внесённым врачом;
 - видит рацион с КБЖУ для своей категории ИМТ;
 - заполняет ежедневный дневник: АД, пульс, вес, глюкоза с контекстом;
 - проходит анкету из 9 тревожных симптомов;
@@ -17,11 +17,12 @@
 - переписывается с врачом внутри приложения.
 
 Врач:
-- создаёт карточки пациенток вручную (ФИО, возраст, ПДР, рост, вес);
+- создаёт карточки пациенток вручную (ФИО, возраст, ПДР, рост, вес, комментарий);
 - генерирует QR для привязки и отзывает привязку;
 - видит график прибавки веса, дневник, анкеты, схватки;
 - получает нейтральные уведомления в Telegram или MAX и разбирает события в кабинете;
 - настраивает пороги АД и глюкозы для конкретной пациентки;
+- ведёт календарь ПДР и личные события, в том числе с привязкой к пациентке;
 - видит календарь ПДР с окном ±1 день, цветами по сроку, риском и переходом в карточку;
 - проходит встроенное обучение и чек-лист первых шагов;
 - ведёт переписку с пациенткой.
@@ -225,7 +226,6 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 Пациентка (Bearer):
 - `GET /api/patient/me`, `GET /api/patient/profile`;
 - `GET /api/patient/invite/{token}`, `POST /api/patient/invite/{token}/confirm`;
-- `POST /api/patient/onboarding`;
 - `GET/POST /api/patient/diary`, `GET /api/patient/diary/today`;
 - `GET /api/patient/gain`;
 - `GET /api/patient/content/current`, `GET /api/patient/content/{week}`;
@@ -243,6 +243,7 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 - `POST /api/doctor/patients/{id}/messages`, `POST .../messages/read`;
 - `PUT /api/doctor/patients/{id}/thresholds`;
 - `GET /api/doctor/alerts`, `POST /api/doctor/alerts/{id}/ack|close`;
+- `GET/POST /api/doctor/calendar/events`, `PUT/DELETE /api/doctor/calendar/events/{id}`;
 - `POST /api/doctor/messenger-link`.
 
 Админ (Bearer):

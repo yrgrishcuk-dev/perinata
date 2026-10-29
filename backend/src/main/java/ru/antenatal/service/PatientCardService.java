@@ -35,7 +35,6 @@ import ru.antenatal.web.dto.DoctorDtos.PatientCreateRequest;
 import ru.antenatal.web.dto.DoctorDtos.PatientDetails;
 import ru.antenatal.web.dto.DoctorDtos.PatientSummary;
 import ru.antenatal.web.dto.DoctorDtos.PatientUpdateRequest;
-import ru.antenatal.web.dto.PatientDtos.OnboardingRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -83,10 +82,9 @@ public class PatientCardService {
         recalculateBmi(card);
         card.setRiskGroup(request.riskGroup() == null ? RiskGroup.LOW : request.riskGroup());
         card.setDiabetesType(request.diabetesType() == null ? DiabetesType.NONE : request.diabetesType());
-        card.setDiaryRequired(request.diaryRequired() != null
-                ? request.diaryRequired()
-                : card.getRiskGroup() == RiskGroup.HIGH);
+        card.setDiaryRequired(request.diaryRequired() != null ? request.diaryRequired() : true);
         card.setReminderTime(request.reminderTime() == null ? LocalTime.of(9, 0) : request.reminderTime());
+        card.setComment(normalizeComment(request.comment()));
         patientCardRepository.save(card);
 
         auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
@@ -133,6 +131,9 @@ public class PatientCardService {
         if (request.reminderTime() != null) {
             card.setReminderTime(request.reminderTime());
         }
+        if (request.comment() != null) {
+            card.setComment(normalizeComment(request.comment()));
+        }
         patientCardRepository.save(card);
         auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
                 "PATIENT_UPDATE", "PATIENT_CARD", String.valueOf(card.getId()), null);
@@ -178,20 +179,6 @@ public class PatientCardService {
                 "BINDING_REVOKE", "PATIENT_CARD", String.valueOf(patientId), null);
     }
 
-    @Transactional
-    public PatientSummary updateOnboarding(PatientCard card, OnboardingRequest request) {
-        card.setHeightCm(request.heightCm());
-        card.setPrePregnancyWeightKg(request.prePregnancyWeightKg());
-        if (request.reminderTime() != null) {
-            card.setReminderTime(request.reminderTime());
-        }
-        recalculateBmi(card);
-        patientCardRepository.save(card);
-        auditService.log("PATIENT", String.valueOf(card.getId()),
-                "ONBOARDING", "PATIENT_CARD", String.valueOf(card.getId()), null);
-        return summary(card);
-    }
-
     @Transactional(readOnly = true)
     public List<PatientSummary> list(Doctor doctor, String query) {
         List<PatientCard> cards = doctor.getRole() == Role.ADMIN
@@ -231,7 +218,8 @@ public class PatientCardService {
                 messengerLinked,
                 card.getHeightCm(),
                 card.getPrePregnancyWeightKg(),
-                card.getReminderTime());
+                card.getReminderTime(),
+                card.getComment());
     }
 
     @Transactional(readOnly = true)
@@ -346,6 +334,14 @@ public class PatientCardService {
         BigDecimal bmi = BmiCalculator.bmi(card.getHeightCm(), card.getPrePregnancyWeightKg());
         card.setBmi(bmi);
         card.setBmiCategory(BmiCalculator.category(bmi));
+    }
+
+    private String normalizeComment(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void validateEdd(LocalDate edd) {

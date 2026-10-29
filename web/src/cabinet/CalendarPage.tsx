@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ErrorBox, RiskBadge, Spinner } from "../components/ui";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
 import { request } from "../api";
 import { formatDate } from "../format";
 import { useStaff } from "../session";
-import type { PatientSummary } from "../types";
+import type { CalendarEventInput, CalendarEventView, PatientSummary } from "../types";
 import {
   addDays,
   buildMonthGrid,
@@ -27,6 +27,15 @@ import { markOnboardingStep } from "../lib/onboarding";
 interface PatientEdd {
   patient: PatientSummary;
   edd: Date;
+}
+
+interface EventDraft {
+  id?: number;
+  date: string;
+  time: string;
+  title: string;
+  patientId: string;
+  note: string;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -83,6 +92,13 @@ export default function CalendarPage() {
   const [patients, setPatients] = useState<PatientSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventView[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [eventsReload, setEventsReload] = useState(0);
+  const [eventDraft, setEventDraft] = useState<EventDraft | null>(null);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [eventFormError, setEventFormError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const load = useCallback(async () => {
     if (!token) {
@@ -110,6 +126,40 @@ export default function CalendarPage() {
     }
   }, [me?.id]);
 
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    const grid = buildMonthGrid(month);
+    const from = toIsoDate(grid[0]);
+    const to = toIsoDate(grid[grid.length - 1]);
+    request<CalendarEventView[]>(
+      `/api/doctor/calendar/events?from=${from}&to=${to}`,
+      { token }
+    )
+      .then((data) => {
+        setCalendarEvents(data);
+        setEventsError(null);
+      })
+      .catch((e: unknown) =>
+        setEventsError(e instanceof Error ? e.message : "Не удалось загрузить события")
+      );
+  }, [token, month, eventsReload]);
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") {
+      return;
+    }
+    setEventDraft({
+      date: searchParams.get("date") ?? toIsoDate(today),
+      time: "",
+      title: "",
+      patientId: searchParams.get("patientId") ?? "",
+      note: ""
+    });
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, today]);
+
   const entries = useMemo<PatientEdd[]>(() => {
     return patients.flatMap((patient) => {
       const edd = parseIsoDate(patient.edd);
@@ -119,10 +169,15 @@ export default function CalendarPage() {
 
   const monthDays = useMemo(() => buildMonthGrid(month), [month]);
 
-  const eventsFor = useCallback(
+  const eddFor = useCallback(
     (day: Date) =>
       sortPatients(entries.filter((entry) => isSameDay(entry.edd, day))),
     [entries]
+  );
+
+  const calendarEventsFor = useCallback(
+    (day: Date) => calendarEvents.filter((event) => event.date === toIsoDate(day)),
+    [calendarEvents]
   );
 
   const windowFor = useCallback(
@@ -134,6 +189,16 @@ export default function CalendarPage() {
   );
 
   const selectedWindow = useMemo(() => windowFor(selectedDate), [windowFor, selectedDate]);
+
+  const selectedEvents = useMemo(
+    () => calendarEventsFor(selectedDate),
+    [calendarEventsFor, selectedDate]
+  );
+
+  const patientOptions = useMemo(
+    () => [...patients].sort((a, b) => a.fullName.localeCompare(b.fullName, "ru")),
+    [patients]
+  );
 
   const upcoming = useMemo(() => {
     return [...entries]
@@ -157,6 +222,93 @@ export default function CalendarPage() {
     setSelectedDate(today);
   };
 
+  const openNewEvent = (date: Date) => {
+    setEventFormError(null);
+    setEventDraft({
+      date: toIsoDate(date),
+      time: "",
+      title: "",
+      patientId: "",
+      note: ""
+    });
+  };
+
+  const openEditEvent = (event: CalendarEventView) => {
+    setEventFormError(null);
+    setEventDraft({
+      id: event.id,
+      date: event.date,
+      time: event.time ? event.time.slice(0, 5) : "",
+      title: event.title,
+      patientId: event.patientId != null ? String(event.patientId) : "",
+      note: event.note ?? ""
+    });
+  };
+
+  const saveEvent = async () => {
+    if (!token || !eventDraft) {
+      return;
+    }
+    if (!eventDraft.title.trim()) {
+      setEventFormError("Укажите название события");
+      return;
+    }
+    if (!eventDraft.date) {
+      setEventFormError("Укажите дату события");
+      return;
+    }
+    setSavingEvent(true);
+    setEventFormError(null);
+    try {
+      const body: CalendarEventInput = {
+        date: eventDraft.date,
+        title: eventDraft.title.trim(),
+        time: eventDraft.time || null,
+        patientId: eventDraft.patientId ? Number(eventDraft.patientId) : null,
+        note: eventDraft.note.trim() || null
+      };
+      await request(
+        eventDraft.id
+          ? `/api/doctor/calendar/events/${eventDraft.id}`
+          : "/api/doctor/calendar/events",
+        {
+          method: eventDraft.id ? "PUT" : "POST",
+          body,
+          token
+        }
+      );
+      setEventDraft(null);
+      setEventsReload((value) => value + 1);
+    } catch (e) {
+      setEventFormError(e instanceof Error ? e.message : "Не удалось сохранить событие");
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const deleteEvent = async () => {
+    if (!token || !eventDraft?.id) {
+      return;
+    }
+    if (!window.confirm("Удалить событие?")) {
+      return;
+    }
+    setSavingEvent(true);
+    setEventFormError(null);
+    try {
+      await request(`/api/doctor/calendar/events/${eventDraft.id}`, {
+        method: "DELETE",
+        token
+      });
+      setEventDraft(null);
+      setEventsReload((value) => value + 1);
+    } catch (e) {
+      setEventFormError(e instanceof Error ? e.message : "Не удалось удалить событие");
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
   if (loading && patients.length === 0) {
     return <Spinner />;
   }
@@ -168,12 +320,15 @@ export default function CalendarPage() {
     <>
       <div className="row between mb">
         <div>
-          <h1 style={{ fontSize: 24 }}>Календарь ПДР</h1>
+          <h1 style={{ fontSize: 24 }}>Календарь</h1>
           <p className="muted small" style={{ marginTop: 4 }}>
-            Окно ±1 день · активных пациенток: {patients.length}
+            ПДР ±1 день · активных пациенток: {patients.length} · событий: {calendarEvents.length}
           </p>
         </div>
         <div className="row">
+          <button className="btn btn-primary btn-sm" type="button" onClick={() => openNewEvent(selectedDate)}>
+            Добавить событие
+          </button>
           <Link className="btn btn-sm" to="/cabinet/patients">
             Пациентки
           </Link>
@@ -213,7 +368,8 @@ export default function CalendarPage() {
 
             <div className="calendar-grid">
               {monthDays.map((day) => {
-                const dayEvents = eventsFor(day);
+                const dayEdd = eddFor(day);
+                const dayCalendarEvents = calendarEventsFor(day);
                 const inWindow = entries.some(
                   (entry) => Math.abs(daysBetween(day, entry.edd)) <= 1
                 );
@@ -225,7 +381,7 @@ export default function CalendarPage() {
                   holiday ? "holiday" : "",
                   isSameDay(day, today) ? "today" : "",
                   isSameDay(day, selectedDate) ? "selected" : "",
-                  inWindow && dayEvents.length === 0 ? "edd-window" : ""
+                  inWindow && dayEdd.length === 0 ? "edd-window" : ""
                 ]
                   .filter(Boolean)
                   .join(" ");
@@ -250,7 +406,7 @@ export default function CalendarPage() {
                       {holiday ? <span className="calendar-holiday-dot" /> : null}
                     </div>
                     <div className="calendar-events">
-                      {dayEvents.slice(0, 3).map((entry) => {
+                      {dayEdd.slice(0, 2).map((entry) => {
                         const tone = eddTone(entry.edd, today);
                         return (
                           <button
@@ -269,8 +425,25 @@ export default function CalendarPage() {
                           </button>
                         );
                       })}
-                      {dayEvents.length > 3 ? (
-                        <span className="calendar-more">+{dayEvents.length - 3}</span>
+                      {dayCalendarEvents.slice(0, 2).map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          className="event-chip"
+                          title={`${event.title}${event.patientName ? ` · ${event.patientName}` : ""}`}
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            openEditEvent(event);
+                          }}
+                        >
+                          {event.time ? `${event.time.slice(0, 5)} ` : ""}
+                          {event.title}
+                        </button>
+                      ))}
+                      {dayEdd.length > 2 || dayCalendarEvents.length > 2 ? (
+                        <span className="calendar-more">
+                          +{Math.max(0, dayEdd.length - 2) + Math.max(0, dayCalendarEvents.length - 2)}
+                        </span>
                       ) : null}
                     </div>
                   </div>
@@ -285,11 +458,59 @@ export default function CalendarPage() {
             <span><i className="legend-dot upcoming" />8–14 дней</span>
             <span><i className="legend-dot past" />ПДР прошла</span>
             <span><i className="legend-risk" />высокий риск</span>
+            <span><i className="legend-event" />событие врача</span>
             <span className="muted">±1 день · выходные и федеральные праздники</span>
           </div>
         </div>
 
         <aside className="calendar-side">
+          <div className="card">
+            <div className="row between">
+              <h2>События</h2>
+              <button className="btn btn-sm" type="button" onClick={() => openNewEvent(selectedDate)}>
+                Добавить
+              </button>
+            </div>
+            <p className="muted small" style={{ marginTop: 4 }}>
+              {formatDayTitle(selectedDate)}
+            </p>
+            {eventsError ? <ErrorBox message={eventsError} /> : null}
+            {selectedEvents.length === 0 ? (
+              <p className="muted mt">На этот день событий нет.</p>
+            ) : (
+              <div className="calendar-event-list mt">
+                {selectedEvents.map((event) => (
+                  <div className="calendar-event-row" key={event.id}>
+                    <div className="row between">
+                      <b className="calendar-event-title">
+                        {event.time ? `${event.time.slice(0, 5)} · ` : ""}
+                        {event.title}
+                      </b>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        type="button"
+                        onClick={() => openEditEvent(event)}
+                      >
+                        Изменить
+                      </button>
+                    </div>
+                    {event.patientId ? (
+                      <Link
+                        className="muted small"
+                        to={`/cabinet/patients/${event.patientId}`}
+                      >
+                        {event.patientName ?? "Пациентка"} · {event.patientPublicCode}
+                      </Link>
+                    ) : (
+                      <span className="muted small">Без привязки к пациентке</span>
+                    )}
+                    {event.note ? <p className="muted small mt">{event.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="card">
             <h2>На выбранный день</h2>
             <p className="muted small" style={{ marginTop: 4 }}>
@@ -331,6 +552,96 @@ export default function CalendarPage() {
           </div>
         </aside>
       </div>
+
+      {eventDraft ? (
+        <div className="modal-backdrop" onClick={() => setEventDraft(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h2>{eventDraft.id ? "Событие" : "Новое событие"}</h2>
+            <div className="grid two mt">
+              <Field label="Дата">
+                <input
+                  type="date"
+                  value={eventDraft.date}
+                  onChange={(event) =>
+                    setEventDraft({ ...eventDraft, date: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Время">
+                <input
+                  type="time"
+                  value={eventDraft.time}
+                  onChange={(event) =>
+                    setEventDraft({ ...eventDraft, time: event.target.value })
+                  }
+                />
+              </Field>
+            </div>
+            <Field label="Название">
+              <input
+                value={eventDraft.title}
+                onChange={(event) =>
+                  setEventDraft({ ...eventDraft, title: event.target.value })
+                }
+                placeholder="Например, приём или анализ"
+                maxLength={200}
+              />
+            </Field>
+            <Field label="Пациентка">
+              <select
+                value={eventDraft.patientId}
+                onChange={(event) =>
+                  setEventDraft({ ...eventDraft, patientId: event.target.value })
+                }
+              >
+                <option value="">Без привязки</option>
+                {patientOptions.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.fullName} · {patient.publicCode}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Заметка">
+              <textarea
+                value={eventDraft.note}
+                onChange={(event) =>
+                  setEventDraft({ ...eventDraft, note: event.target.value })
+                }
+                maxLength={1000}
+              />
+            </Field>
+            {eventFormError ? <ErrorBox message={eventFormError} /> : null}
+            <div className="row mt">
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={savingEvent}
+                onClick={() => void saveEvent()}
+              >
+                {savingEvent ? "Сохраняем…" : "Сохранить"}
+              </button>
+              {eventDraft.id ? (
+                <button
+                  className="btn btn-soft-danger"
+                  type="button"
+                  disabled={savingEvent}
+                  onClick={() => void deleteEvent()}
+                >
+                  Удалить
+                </button>
+              ) : null}
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setEventDraft(null)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

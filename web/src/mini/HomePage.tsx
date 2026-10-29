@@ -67,6 +67,12 @@ export default function HomePage() {
             ? ` · коридор ${gain.minGainKg.toFixed(1)}–${gain.maxGainKg.toFixed(1)} кг`
             : ""}
         </p>
+        {summary.bmi == null ? (
+          <p className="notice" style={{ marginBottom: 8 }}>
+            Рост и вес до беременности ещё не заполнены. Их внесёт врач — после этого появится
+            расчёт ИМТ и коридора прибавки.
+          </p>
+        ) : null}
         <GainChart gain={gain} />
       </div>
 
