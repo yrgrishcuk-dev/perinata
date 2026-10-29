@@ -362,6 +362,16 @@ export default function PatientPage() {
             className="btn"
             onClick={() =>
               navigate(
+                `/cabinet/calendar?appointment=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+              )
+            }
+          >
+            Записать на приём
+          </button>
+          <button
+            className="btn"
+            onClick={() =>
+              navigate(
                 `/cabinet/calendar?new=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
               )
             }

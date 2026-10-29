@@ -15,12 +15,14 @@ import ru.antenatal.domain.Doctor;
 import ru.antenatal.domain.PatientAccount;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.PatientStatus;
+import ru.antenatal.domain.PatientResponse;
 import ru.antenatal.domain.Platform;
 import ru.antenatal.repo.DoctorRepository;
 import ru.antenatal.repo.PatientAccountRepository;
 import ru.antenatal.repo.PatientCardRepository;
 import ru.antenatal.security.CurrentPrincipal;
 import ru.antenatal.service.AlertService;
+import ru.antenatal.service.AppointmentService;
 import ru.antenatal.service.ContentService;
 import ru.antenatal.service.ContractionService;
 import ru.antenatal.service.DiaryService;
@@ -33,6 +35,7 @@ import ru.antenatal.service.SymptomService;
 import ru.antenatal.web.dto.CommonDtos.AlertView;
 import ru.antenatal.web.dto.CommonDtos.GainView;
 import ru.antenatal.web.dto.CommonDtos.WeekContentView;
+import ru.antenatal.web.dto.AppointmentDtos.AppointmentView;
 import ru.antenatal.web.dto.PatientDtos.ContentBundle;
 import ru.antenatal.web.dto.PatientDtos.ContractionAddRequest;
 import ru.antenatal.web.dto.PatientDtos.ContractionStateResponse;
@@ -73,6 +76,7 @@ public class PatientController {
     private final AlertService alertService;
     private final MessageService messageService;
     private final LinkService linkService;
+    private final AppointmentService appointmentService;
     private final ru.antenatal.service.AuditService auditService;
 
     @GetMapping("/me")
@@ -220,6 +224,25 @@ public class PatientController {
         return alertService.forPatient(patientAccessService.requireCard(principal));
     }
 
+    @GetMapping("/appointments")
+    public List<AppointmentView> appointments(@AuthenticationPrincipal CurrentPrincipal principal) {
+        return appointmentService.listForPatient(patientAccessService.requireCard(principal));
+    }
+
+    @PostMapping("/appointments/{id}/confirm")
+    public AppointmentView confirmAppointment(@AuthenticationPrincipal CurrentPrincipal principal,
+                                              @PathVariable Long id) {
+        return appointmentService.respond(patientAccessService.requireCard(principal),
+                id, PatientResponse.CONFIRMED);
+    }
+
+    @PostMapping("/appointments/{id}/decline")
+    public AppointmentView declineAppointment(@AuthenticationPrincipal CurrentPrincipal principal,
+                                              @PathVariable Long id) {
+        return appointmentService.respond(patientAccessService.requireCard(principal),
+                id, PatientResponse.DECLINED);
+    }
+
     @PostMapping("/consent/revoke")
     public void revokeConsent(@AuthenticationPrincipal CurrentPrincipal principal) {
         PatientAccessService.PatientContext context = patientAccessService.requireContext(principal);
@@ -239,6 +262,7 @@ public class PatientController {
                 contentService.ration(card).orElse(null),
                 diaryService.today(card),
                 messageService.forPatient(card).unread(),
-                doctor == null ? null : doctor.getFullName());
+                doctor == null ? null : doctor.getFullName(),
+                appointmentService.nextForPatient(card));
     }
 }

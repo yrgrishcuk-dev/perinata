@@ -12,7 +12,8 @@ export type AlarmType =
   | "CONTRACTION"
   | "WEIGHT"
   | "MISSED_DIARY"
-  | "WATERS";
+  | "WATERS"
+  | "APPOINTMENT_RESPONSE";
 export type GlucoseContext = "FASTING" | "POSTPRANDIAL";
 export type MessageDirection = "TO_PATIENT" | "TO_DOCTOR";
 export type AuthorType = "DOCTOR" | "PATIENT" | "SYSTEM";
@@ -180,6 +181,7 @@ export interface PatientHome {
   todayDiary: DiaryView | null;
   unreadMessages: number;
   doctorName: string | null;
+  nextAppointment: AppointmentView | null;
 }
 
 export interface PatientMe {
@@ -316,3 +318,38 @@ export interface CalendarEventInput {
   patientId?: number | null;
   note?: string | null;
 }
+
+export type AppointmentType = "VISIT" | "ULTRASOUND" | "TESTS" | "OTHER";
+export type AppointmentStatus = "SCHEDULED" | "CANCELLED";
+export type PatientResponse = "PENDING" | "CONFIRMED" | "DECLINED";
+
+export interface AppointmentView {
+  id: number;
+  patientId: number;
+  patientName: string | null;
+  patientPublicCode: string | null;
+  doctorName: string | null;
+  startAt: string;
+  date: string;
+  time: string;
+  endTime: string;
+  durationMinutes: number;
+  type: AppointmentType;
+  place: string | null;
+  comment: string | null;
+  status: AppointmentStatus;
+  patientResponse: PatientResponse;
+  timezone: string;
+}
+
+export interface AppointmentCreateInput {
+  patientId: number;
+  date: string;
+  time: string;
+  durationMinutes: number;
+  type: AppointmentType;
+  place?: string | null;
+  comment?: string | null;
+}
+
+export type AppointmentUpdateInput = Omit<AppointmentCreateInput, "patientId">;

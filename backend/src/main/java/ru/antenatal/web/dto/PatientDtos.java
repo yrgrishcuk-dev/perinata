@@ -134,7 +134,8 @@ public final class PatientDtos {
             CommonDtos.RationView ration,
             DiaryView todayDiary,
             long unreadMessages,
-            String doctorName
+            String doctorName,
+            AppointmentDtos.AppointmentView nextAppointment
     ) {
     }
 }
