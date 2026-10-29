@@ -74,7 +74,7 @@ export default function ProfilePage() {
         <dl className="kv mt">
           <dt>Возраст</dt>
           <dd>{summary.ageYears} лет</dd>
-          <dt>Роды по счёту</dt>
+          <dt>Роды</dt>
           <dd>{summary.parity ?? "—"}</dd>
           <dt>Срок</dt>
           <dd>{summary.gestationalAge}</dd>
@@ -98,10 +98,8 @@ export default function ProfilePage() {
           <br />
           Дано: {formatDateTime(profile.consentAt)}
         </p>
-        <Link className="btn btn-block mt" to="/onboarding">
-          Изменить рост, вес и напоминание
-        </Link>
-        <Link className="btn btn-ghost btn-block" to="/app/messages">
+        <p className="notice mt">Рост, вес и напоминание заполняет врач в карточке.</p>
+        <Link className="btn btn-ghost btn-block mt" to="/app/messages">
           Сообщения врачу
         </Link>
       </div>

@@ -20,6 +20,7 @@ import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.Platform;
 import ru.antenatal.security.CurrentPrincipal;
 import ru.antenatal.service.AlertService;
+import ru.antenatal.service.CalendarEventService;
 import ru.antenatal.service.DiaryService;
 import ru.antenatal.service.DoctorAccessService;
 import ru.antenatal.service.LinkService;
@@ -28,6 +29,8 @@ import ru.antenatal.service.PatientCardService;
 import ru.antenatal.service.SymptomService;
 import ru.antenatal.web.dto.CommonDtos.AlertView;
 import ru.antenatal.web.dto.CommonDtos.MessageView;
+import ru.antenatal.web.dto.CalendarDtos.CalendarEventRequest;
+import ru.antenatal.web.dto.CalendarDtos.CalendarEventView;
 import ru.antenatal.web.dto.DoctorDtos.AlertActionRequest;
 import ru.antenatal.web.dto.DoctorDtos.CloseRequest;
 import ru.antenatal.web.dto.DoctorDtos.DashboardView;
@@ -61,6 +64,7 @@ public class DoctorController {
     private final SymptomService symptomService;
     private final MessageService messageService;
     private final ru.antenatal.service.ContractionService contractionService;
+    private final CalendarEventService calendarEventService;
 
     @GetMapping("/dashboard")
     public DashboardView dashboard(@AuthenticationPrincipal CurrentPrincipal principal) {
@@ -224,5 +228,40 @@ public class DoctorController {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
         return linkService.createDoctorLink(doctor,
                 platform == null ? Platform.TELEGRAM : platform);
+    }
+
+    @GetMapping("/calendar/events")
+    public List<CalendarEventView> calendarEvents(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return calendarEventService.list(doctor, from, to);
+    }
+
+    @PostMapping("/calendar/events")
+    public CalendarEventView createCalendarEvent(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @Valid @RequestBody CalendarEventRequest request) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return calendarEventService.create(doctor, request);
+    }
+
+    @PutMapping("/calendar/events/{id}")
+    public CalendarEventView updateCalendarEvent(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody CalendarEventRequest request) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return calendarEventService.update(doctor, id, request);
+    }
+
+    @DeleteMapping("/calendar/events/{id}")
+    public void deleteCalendarEvent(@AuthenticationPrincipal CurrentPrincipal principal,
+                                    @PathVariable Long id) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        calendarEventService.delete(doctor, id);
     }
 }

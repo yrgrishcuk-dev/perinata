@@ -33,9 +33,6 @@ export default function MiniLayout() {
   if (!me?.bound || !me.home) {
     return <Navigate to="/connect" replace />;
   }
-  if (me.home.summary.bmi == null) {
-    return <Navigate to="/onboarding" replace />;
-  }
 
   return (
     <div className="shell">

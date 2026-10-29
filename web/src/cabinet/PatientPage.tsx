@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { GainChart } from "../components/GainChart";
+import { Counter } from "../components/Counter";
 import {
   AlarmStatusBadge,
   ErrorBox,
@@ -20,6 +21,7 @@ import {
   gainStatusLabel
 } from "../format";
 import { useStaff } from "../session";
+import { toIsoDate } from "../lib/calendar";
 import type {
   AlertView,
   DiabetesType,
@@ -44,6 +46,7 @@ interface SettingsState {
   diabetesType: DiabetesType;
   diaryRequired: boolean;
   reminderTime: string;
+  comment: string;
 }
 
 const thresholdLabels: Record<string, string> = {
@@ -118,7 +121,8 @@ export default function PatientPage() {
       riskGroup: details.summary.riskGroup,
       diabetesType: details.summary.diabetesType,
       diaryRequired: details.summary.diaryRequired,
-      reminderTime: details.reminderTime ? details.reminderTime.slice(0, 5) : "09:00"
+      reminderTime: details.reminderTime ? details.reminderTime.slice(0, 5) : "09:00",
+      comment: details.comment ?? ""
     });
     setThresholds(
       Object.fromEntries(Object.entries(details.thresholds).map(([key, value]) => [key, String(value)]))
@@ -270,7 +274,7 @@ export default function PatientPage() {
       const body: PatientUpdateInput = {
         fullName: settings.fullName,
         ageYears: Number(settings.ageYears),
-        parity: settings.parity ? Number(settings.parity) : null,
+        parity: Number(settings.parity || "1"),
         edd: settings.edd,
         heightCm: settings.heightCm ? Number(settings.heightCm.replace(",", ".")) : null,
         prePregnancyWeightKg: settings.prePregnancyWeightKg
@@ -279,7 +283,8 @@ export default function PatientPage() {
         riskGroup: settings.riskGroup,
         diabetesType: settings.diabetesType,
         diaryRequired: settings.diaryRequired,
-        reminderTime: settings.reminderTime
+        reminderTime: settings.reminderTime,
+        comment: settings.comment.trim()
       };
       await request(`/api/doctor/patients/${patientId}`, {
         method: "PATCH",
@@ -353,6 +358,16 @@ export default function PatientPage() {
           </div>
         </div>
         <div className="row">
+          <button
+            className="btn"
+            onClick={() =>
+              navigate(
+                `/cabinet/calendar?new=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+              )
+            }
+          >
+            Добавить событие
+          </button>
           <button className="btn btn-primary" onClick={() => void createLink()}>
             QR для привязки
           </button>
@@ -385,6 +400,18 @@ export default function PatientPage() {
 
       {tab === "overview" ? (
         <>
+          {details.heightCm == null || details.prePregnancyWeightKg == null ? (
+            <div className="alert info">
+              <div>
+                Рост и вес до беременности не заполнены — ИМТ и коридор прибавки не
+                рассчитываются.
+              </div>
+              <button className="btn btn-sm mt" type="button" onClick={() => setTab("settings")}>
+                Заполнить
+              </button>
+            </div>
+          ) : null}
+
           <div className="grid three mb">
             <div className="stat">
               <span className="muted small">Срок</span>
@@ -425,7 +452,7 @@ export default function PatientPage() {
               <dd>{details.doctorName ?? "—"}</dd>
               <dt>Возраст</dt>
               <dd>{summary.ageYears}</dd>
-              <dt>Роды по счёту</dt>
+              <dt>Роды</dt>
               <dd>{summary.parity ?? "—"}</dd>
               <dt>Группа риска</dt>
               <dd>{summary.riskGroup === "HIGH" ? "Высокий" : "Низкий"}</dd>
@@ -439,6 +466,8 @@ export default function PatientPage() {
               </dd>
               <dt>Дневник обязателен</dt>
               <dd>{summary.diaryRequired ? "Да" : "Нет"}</dd>
+              <dt>Комментарий</dt>
+              <dd>{details.comment ?? "—"}</dd>
               <dt>Привязка</dt>
               <dd>{details.boundPlatform ?? "нет"}</dd>
               <dt>Согласие</dt>
@@ -591,7 +620,7 @@ export default function PatientPage() {
           <div className="card">
             <h2>Данные карточки</h2>
             <div className="grid two mt">
-              <Field label="ФИО">
+              <Field label="ФИО" hint="Эти данные отобразятся у пациентки в карточке.">
                 <input
                   value={settings.fullName}
                   onChange={(event) => setSettings({ ...settings, fullName: event.target.value })}
@@ -604,12 +633,10 @@ export default function PatientPage() {
                   onChange={(event) => setSettings({ ...settings, ageYears: event.target.value })}
                 />
               </Field>
-              <Field label="Какие по счёту роды">
-                <input
-                  inputMode="numeric"
-                  value={settings.parity}
-                  onChange={(event) => setSettings({ ...settings, parity: event.target.value })}
-                  placeholder="1"
+              <Field label="Роды" hint="Какими по счёту будут эти роды.">
+                <Counter
+                  value={settings.parity || "1"}
+                  onChange={(parity) => setSettings({ ...settings, parity })}
                 />
               </Field>
               <Field label="ПДР">
@@ -628,7 +655,7 @@ export default function PatientPage() {
                   }
                 />
               </Field>
-              <Field label="Рост, см">
+              <Field label="Рост, см" hint="Заполняется только врачом.">
                 <input
                   inputMode="decimal"
                   value={settings.heightCm}
@@ -636,7 +663,7 @@ export default function PatientPage() {
                   placeholder="см"
                 />
               </Field>
-              <Field label="Вес до беременности, кг">
+              <Field label="Вес до беременности, кг" hint="Заполняется только врачом.">
                 <input
                   inputMode="decimal"
                   value={settings.prePregnancyWeightKg}
@@ -689,6 +716,14 @@ export default function PatientPage() {
                 </select>
               </Field>
             </div>
+            <Field label="Комментарий врача" hint="Виден только врачу.">
+              <textarea
+                value={settings.comment}
+                onChange={(event) => setSettings({ ...settings, comment: event.target.value })}
+                placeholder="Внутренняя заметка по пациентке"
+                maxLength={4000}
+              />
+            </Field>
             <button className="btn btn-primary" disabled={savingSettings} onClick={() => void saveSettings()}>
               {savingSettings ? "Сохраняем…" : "Сохранить карточку"}
             </button>

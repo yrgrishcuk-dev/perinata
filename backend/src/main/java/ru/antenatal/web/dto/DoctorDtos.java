@@ -34,7 +34,8 @@ public final class DoctorDtos {
             RiskGroup riskGroup,
             DiabetesType diabetesType,
             Boolean diaryRequired,
-            LocalTime reminderTime
+            LocalTime reminderTime,
+            @Size(max = 4000) String comment
     ) {
     }
 
@@ -48,7 +49,8 @@ public final class DoctorDtos {
             RiskGroup riskGroup,
             DiabetesType diabetesType,
             Boolean diaryRequired,
-            LocalTime reminderTime
+            LocalTime reminderTime,
+            @Size(max = 4000) String comment
     ) {
     }
 
@@ -86,7 +88,8 @@ public final class DoctorDtos {
             boolean hasMessengerNotifications,
             BigDecimal heightCm,
             BigDecimal prePregnancyWeightKg,
-            java.time.LocalTime reminderTime
+            java.time.LocalTime reminderTime,
+            String comment
     ) {
     }
 

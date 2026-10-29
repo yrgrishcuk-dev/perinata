@@ -59,9 +59,11 @@ public class AlertService {
         String prefix = severity == Severity.CRITICAL
                 ? "Тревожное событие"
                 : severity == Severity.WARNING ? "Событие" : "Пометка";
-        notificationService.notifyDoctor(card,
-                prefix + " по карточке " + card.getPublicCode() + ". Откройте кабинет.",
-                "alert:" + alarm.getId() + ":doctor");
+        if (type != AlarmType.MISSED_DIARY) {
+            notificationService.notifyDoctor(card,
+                    prefix + " по карточке " + card.getPublicCode() + ". Откройте кабинет.",
+                    "alert:" + alarm.getId() + ":doctor");
+        }
 
         auditService.log("SYSTEM", null, "ALARM_CREATE", "ALARM",
                 String.valueOf(alarm.getId()), "type=" + type + ",severity=" + severity);

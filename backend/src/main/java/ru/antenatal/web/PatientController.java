@@ -33,7 +33,6 @@ import ru.antenatal.service.SymptomService;
 import ru.antenatal.web.dto.CommonDtos.AlertView;
 import ru.antenatal.web.dto.CommonDtos.GainView;
 import ru.antenatal.web.dto.CommonDtos.WeekContentView;
-import ru.antenatal.web.dto.DoctorDtos.PatientSummary;
 import ru.antenatal.web.dto.PatientDtos.ContentBundle;
 import ru.antenatal.web.dto.PatientDtos.ContractionAddRequest;
 import ru.antenatal.web.dto.PatientDtos.ContractionStateResponse;
@@ -45,7 +44,6 @@ import ru.antenatal.web.dto.PatientDtos.InviteConfirmResponse;
 import ru.antenatal.web.dto.PatientDtos.InvitePreviewResponse;
 import ru.antenatal.web.dto.PatientDtos.MessageSendRequest;
 import ru.antenatal.web.dto.PatientDtos.MessagesResponse;
-import ru.antenatal.web.dto.PatientDtos.OnboardingRequest;
 import ru.antenatal.web.dto.PatientDtos.PatientHomeResponse;
 import ru.antenatal.web.dto.PatientDtos.PatientMeResponse;
 import ru.antenatal.web.dto.PatientDtos.ProfileResponse;
@@ -108,13 +106,6 @@ public class PatientController {
         PatientCard card = linkService.confirm(token, patientAccessService.platformOf(principal),
                 messengerId, messengerId, request.consent());
         return new InviteConfirmResponse(true, patientCardService.summary(card));
-    }
-
-    @PostMapping("/onboarding")
-    public PatientSummary onboarding(@AuthenticationPrincipal CurrentPrincipal principal,
-                                     @Valid @RequestBody OnboardingRequest request) {
-        PatientCard card = patientAccessService.requireCard(principal);
-        return patientCardService.updateOnboarding(card, request);
     }
 
     @GetMapping("/profile")

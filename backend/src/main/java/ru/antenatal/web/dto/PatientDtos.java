@@ -1,7 +1,5 @@
 package ru.antenatal.web.dto;
 
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -39,13 +37,6 @@ public final class PatientDtos {
             int week,
             CommonDtos.WeekContentView content,
             CommonDtos.RationView ration
-    ) {
-    }
-
-    public record OnboardingRequest(
-            @NotNull @DecimalMin("100") @DecimalMax("250") BigDecimal heightCm,
-            @NotNull @DecimalMin("30") @DecimalMax("250") BigDecimal prePregnancyWeightKg,
-            LocalTime reminderTime
     ) {
     }
 

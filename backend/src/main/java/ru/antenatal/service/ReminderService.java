@@ -8,7 +8,6 @@ import ru.antenatal.config.AppProperties;
 import ru.antenatal.domain.AlarmType;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.PatientStatus;
-import ru.antenatal.domain.RiskGroup;
 import ru.antenatal.domain.Severity;
 import ru.antenatal.repo.DiaryEntryRepository;
 import ru.antenatal.repo.PatientCardRepository;
@@ -42,8 +41,9 @@ public class ReminderService {
 
             for (PatientCard card : cards) {
                 sendDiaryReminder(card, now, today);
+                sendMissedDiaryReminder(card, now, today);
                 sendWeeklySymptomReminder(card, now, today);
-                flagMissedDiary(card, today);
+                flagMissedDiary(card, now, today);
             }
         } catch (RuntimeException e) {
             log.error("Reminder run failed: {}", e.getClass().getName());
@@ -64,6 +64,24 @@ public class ReminderService {
                 "reminder:diary:" + card.getId() + ":" + today);
     }
 
+    private void sendMissedDiaryReminder(PatientCard card, ZonedDateTime now, LocalDate today) {
+        if (!card.isDiaryRequired()) {
+            return;
+        }
+        if (now.getHour() != 21 || now.getMinute() != 0) {
+            return;
+        }
+        if (card.getReminderTime().getHour() == 21 && card.getReminderTime().getMinute() == 0) {
+            return;
+        }
+        if (diaryEntryRepository.existsByPatientCardIdAndEntryDate(card.getId(), today)) {
+            return;
+        }
+        notificationService.notifyPatient(card,
+                "Дневник за сегодня не заполнен. Откройте приложение и внесите данные.",
+                "reminder:diary-missed:" + card.getId() + ":" + today);
+    }
+
     private void sendWeeklySymptomReminder(PatientCard card, ZonedDateTime now, LocalDate today) {
         if (now.getDayOfWeek() != DayOfWeek.MONDAY
                 || now.getHour() != 10
@@ -75,17 +93,18 @@ public class ReminderService {
                 "reminder:symptoms:" + card.getId() + ":" + today);
     }
 
-    private void flagMissedDiary(PatientCard card, LocalDate today) {
-        if (card.getRiskGroup() != RiskGroup.HIGH || !card.isDiaryRequired()) {
+    private void flagMissedDiary(PatientCard card, ZonedDateTime now, LocalDate today) {
+        if (!card.isDiaryRequired()) {
             return;
         }
-        boolean missedToday = !diaryEntryRepository
-                .existsByPatientCardIdAndEntryDate(card.getId(), today);
-        boolean missedYesterday = !diaryEntryRepository
-                .existsByPatientCardIdAndEntryDate(card.getId(), today.minusDays(1));
-        if (missedToday && missedYesterday) {
-            alertService.raise(card, AlarmType.MISSED_DIARY, Severity.INFO,
-                    Map.of("days", 2), Duration.ofHours(23));
+        if (now.getHour() != 0 || now.getMinute() != 10) {
+            return;
         }
+        LocalDate yesterday = today.minusDays(1);
+        if (diaryEntryRepository.existsByPatientCardIdAndEntryDate(card.getId(), yesterday)) {
+            return;
+        }
+        alertService.raise(card, AlarmType.MISSED_DIARY, Severity.INFO,
+                Map.of("date", yesterday.toString()), Duration.ofHours(23));
     }
 }
