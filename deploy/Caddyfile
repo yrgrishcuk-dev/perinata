@@ -1,8 +1,20 @@
-{$DOMAIN} {
+(antenatal) {
     encode zstd gzip
     log {
         output stdout
         format console
     }
     reverse_proxy app:8080
+}
+
+{$DOMAIN} {
+    import antenatal
+}
+
+www.{$DOMAIN} {
+    redir https://{$DOMAIN}{uri} permanent
+}
+
+136.234.13.246.nip.io {
+    import antenatal
 }
