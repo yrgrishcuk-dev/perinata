@@ -21,17 +21,17 @@ export default function LandingPage() {
     return <Navigate to="/app" replace />;
   }
 
-  const username = config?.telegramBotUsername?.trim() ?? "";
+  const username = config?.telegramBotUsername?.trim().replace(/^@/, "") ?? "";
   const loading = !config && !failed;
 
   return (
     <div className="shell">
       <main className="landing">
         <header className="landing-head">
-          <div className="brand">
+          <h1 className="brand">
             Антенатальный помощник
             <small>Наблюдение за беременностью</small>
-          </div>
+          </h1>
           <p className="muted">Выберите, как продолжить.</p>
         </header>
 
@@ -60,7 +60,7 @@ export default function LandingPage() {
                 />
               </svg>
             </div>
-            <h1>Я врач</h1>
+            <h2>Я врач</h2>
             <p className="muted">Кабинет врача и администратора клиники.</p>
             <Link className="btn btn-primary btn-block" to="/cabinet/login">
               Войти в кабинет
@@ -78,7 +78,7 @@ export default function LandingPage() {
                 />
               </svg>
             </div>
-            <h1>Я пациентка</h1>
+            <h2>Я пациентка</h2>
             <p className="muted">Дневник, симптомы, схватки и развитие плода.</p>
             {username ? (
               <a
