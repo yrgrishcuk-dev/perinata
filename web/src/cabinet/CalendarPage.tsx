@@ -2,9 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
 import { request } from "../api";
-import { formatDate } from "../format";
+import {
+  appointmentTypeLabel,
+  appointmentWhen,
+  formatDate,
+  patientResponseClass,
+  patientResponseLabel
+} from "../format";
+import { downloadAppointmentIcs } from "../lib/ics";
 import { useStaff } from "../session";
-import type { CalendarEventInput, CalendarEventView, PatientSummary } from "../types";
+import type {
+  AppointmentCreateInput,
+  AppointmentType,
+  AppointmentUpdateInput,
+  AppointmentView,
+  CalendarEventInput,
+  CalendarEventView,
+  PatientSummary
+} from "../types";
 import {
   addDays,
   buildMonthGrid,
@@ -36,6 +51,24 @@ interface EventDraft {
   title: string;
   patientId: string;
   note: string;
+}
+
+interface AppointmentDraft {
+  id?: number;
+  patientId: string;
+  date: string;
+  time: string;
+  durationMinutes: string;
+  type: AppointmentType;
+  place: string;
+  comment: string;
+}
+
+const APPOINTMENT_TYPES: AppointmentType[] = ["VISIT", "ULTRASOUND", "TESTS", "OTHER"];
+
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -98,6 +131,12 @@ export default function CalendarPage() {
   const [eventDraft, setEventDraft] = useState<EventDraft | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
   const [eventFormError, setEventFormError] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<AppointmentView[]>([]);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
+  const [appointmentsReload, setAppointmentsReload] = useState(0);
+  const [appointmentDraft, setAppointmentDraft] = useState<AppointmentDraft | null>(null);
+  const [savingAppointment, setSavingAppointment] = useState(false);
+  const [appointmentFormError, setAppointmentFormError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const load = useCallback(async () => {
@@ -147,6 +186,26 @@ export default function CalendarPage() {
   }, [token, month, eventsReload]);
 
   useEffect(() => {
+    if (!token) {
+      return;
+    }
+    const grid = buildMonthGrid(month);
+    const from = toIsoDate(grid[0]);
+    const to = toIsoDate(grid[grid.length - 1]);
+    request<AppointmentView[]>(
+      `/api/doctor/appointments?from=${from}&to=${to}`,
+      { token }
+    )
+      .then((data) => {
+        setAppointments(data);
+        setAppointmentsError(null);
+      })
+      .catch((e: unknown) =>
+        setAppointmentsError(e instanceof Error ? e.message : "Не удалось загрузить приёмы")
+      );
+  }, [token, month, appointmentsReload]);
+
+  useEffect(() => {
     if (searchParams.get("new") !== "1") {
       return;
     }
@@ -156,6 +215,23 @@ export default function CalendarPage() {
       title: "",
       patientId: searchParams.get("patientId") ?? "",
       note: ""
+    });
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, today]);
+
+  useEffect(() => {
+    if (searchParams.get("appointment") !== "1") {
+      return;
+    }
+    setAppointmentFormError(null);
+    setAppointmentDraft({
+      patientId: searchParams.get("patientId") ?? "",
+      date: searchParams.get("date") ?? toIsoDate(today),
+      time: "",
+      durationMinutes: "30",
+      type: "VISIT",
+      place: "",
+      comment: ""
     });
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams, today]);
@@ -180,6 +256,11 @@ export default function CalendarPage() {
     [calendarEvents]
   );
 
+  const appointmentsFor = useCallback(
+    (day: Date) => appointments.filter((item) => item.date === toIsoDate(day)),
+    [appointments]
+  );
+
   const windowFor = useCallback(
     (day: Date) =>
       sortPatients(
@@ -194,6 +275,34 @@ export default function CalendarPage() {
     () => calendarEventsFor(selectedDate),
     [calendarEventsFor, selectedDate]
   );
+
+  const selectedAppointments = useMemo(
+    () => appointmentsFor(selectedDate),
+    [appointmentsFor, selectedDate]
+  );
+
+  const currentAppointment = appointmentDraft?.id
+    ? appointments.find((item) => item.id === appointmentDraft.id) ?? null
+    : null;
+
+  const appointmentConflict = useMemo(() => {
+    if (!appointmentDraft?.date || !appointmentDraft.time) {
+      return null;
+    }
+    const start = timeToMinutes(appointmentDraft.time);
+    const end = start + Number(appointmentDraft.durationMinutes || "30");
+    return appointments.find((item) => {
+      if (item.id === appointmentDraft.id || item.status !== "SCHEDULED") {
+        return false;
+      }
+      if (item.date !== appointmentDraft.date) {
+        return false;
+      }
+      const otherStart = timeToMinutes(item.time);
+      const otherEnd = otherStart + item.durationMinutes;
+      return otherStart < end && otherEnd > start;
+    }) ?? null;
+  }, [appointmentDraft, appointments]);
 
   const patientOptions = useMemo(
     () => [...patients].sort((a, b) => a.fullName.localeCompare(b.fullName, "ru")),
@@ -309,6 +418,114 @@ export default function CalendarPage() {
     }
   };
 
+  const openNewAppointment = (date: Date, patientId = "") => {
+    setAppointmentFormError(null);
+    setAppointmentDraft({
+      patientId,
+      date: toIsoDate(date),
+      time: "09:00",
+      durationMinutes: "30",
+      type: "VISIT",
+      place: "",
+      comment: ""
+    });
+  };
+
+  const openEditAppointment = (appointment: AppointmentView) => {
+    setAppointmentFormError(null);
+    setAppointmentDraft({
+      id: appointment.id,
+      patientId: String(appointment.patientId),
+      date: appointment.date,
+      time: appointment.time.slice(0, 5),
+      durationMinutes: String(appointment.durationMinutes),
+      type: appointment.type,
+      place: appointment.place ?? "",
+      comment: appointment.comment ?? ""
+    });
+  };
+
+  const saveAppointment = async () => {
+    if (!token || !appointmentDraft) {
+      return;
+    }
+    if (!appointmentDraft.patientId) {
+      setAppointmentFormError("Выберите пациентку");
+      return;
+    }
+    if (!appointmentDraft.date || !appointmentDraft.time) {
+      setAppointmentFormError("Укажите дату и время");
+      return;
+    }
+    const duration = Number(appointmentDraft.durationMinutes);
+    if (!Number.isFinite(duration) || duration < 10 || duration > 240) {
+      setAppointmentFormError("Длительность должна быть от 10 до 240 минут");
+      return;
+    }
+    setSavingAppointment(true);
+    setAppointmentFormError(null);
+    try {
+      if (appointmentDraft.id) {
+        const body: AppointmentUpdateInput = {
+          date: appointmentDraft.date,
+          time: appointmentDraft.time,
+          durationMinutes: duration,
+          type: appointmentDraft.type,
+          place: appointmentDraft.place.trim() || null,
+          comment: appointmentDraft.comment.trim() || null
+        };
+        await request<AppointmentView>(
+          `/api/doctor/appointments/${appointmentDraft.id}`,
+          { method: "PUT", body, token }
+        );
+      } else {
+        const body: AppointmentCreateInput = {
+          patientId: Number(appointmentDraft.patientId),
+          date: appointmentDraft.date,
+          time: appointmentDraft.time,
+          durationMinutes: duration,
+          type: appointmentDraft.type,
+          place: appointmentDraft.place.trim() || null,
+          comment: appointmentDraft.comment.trim() || null
+        };
+        await request<AppointmentView>("/api/doctor/appointments", {
+          method: "POST",
+          body,
+          token
+        });
+      }
+      setAppointmentDraft(null);
+      setAppointmentsReload((value) => value + 1);
+    } catch (e) {
+      setAppointmentFormError(e instanceof Error ? e.message : "Не удалось сохранить приём");
+    } finally {
+      setSavingAppointment(false);
+    }
+  };
+
+  const cancelAppointment = async () => {
+    if (!token || !appointmentDraft?.id) {
+      return;
+    }
+    if (!window.confirm("Отменить приём? Пациентка получит уведомление.")) {
+      return;
+    }
+    setSavingAppointment(true);
+    setAppointmentFormError(null);
+    try {
+      await request(`/api/doctor/appointments/${appointmentDraft.id}/cancel`, {
+        method: "POST",
+        token
+      });
+      setAppointmentDraft(null);
+      setAppointmentsReload((value) => value + 1);
+    } catch (e) {
+      setAppointmentFormError(e instanceof Error ? e.message : "Не удалось отменить приём");
+    } finally {
+      setSavingAppointment(false);
+    }
+  };
+
   if (loading && patients.length === 0) {
     return <Spinner />;
   }
@@ -322,11 +539,19 @@ export default function CalendarPage() {
         <div>
           <h1 style={{ fontSize: 24 }}>Календарь</h1>
           <p className="muted small" style={{ marginTop: 4 }}>
-            ПДР ±1 день · активных пациенток: {patients.length} · событий: {calendarEvents.length}
+            ПДР ±1 день · пациенток: {patients.length} · приёмов: {appointments.length} ·
+            событий: {calendarEvents.length}
           </p>
         </div>
         <div className="row">
-          <button className="btn btn-primary btn-sm" type="button" onClick={() => openNewEvent(selectedDate)}>
+          <button
+            className="btn btn-primary btn-sm"
+            type="button"
+            onClick={() => openNewAppointment(selectedDate)}
+          >
+            Записать на приём
+          </button>
+          <button className="btn btn-sm" type="button" onClick={() => openNewEvent(selectedDate)}>
             Добавить событие
           </button>
           <Link className="btn btn-sm" to="/cabinet/patients">
@@ -370,6 +595,7 @@ export default function CalendarPage() {
               {monthDays.map((day) => {
                 const dayEdd = eddFor(day);
                 const dayCalendarEvents = calendarEventsFor(day);
+                const dayAppointments = appointmentsFor(day);
                 const inWindow = entries.some(
                   (entry) => Math.abs(daysBetween(day, entry.edd)) <= 1
                 );
@@ -440,9 +666,32 @@ export default function CalendarPage() {
                           {event.title}
                         </button>
                       ))}
-                      {dayEdd.length > 2 || dayCalendarEvents.length > 2 ? (
+                      {dayAppointments.slice(0, 2).map((appointment) => (
+                        <button
+                          key={appointment.id}
+                          type="button"
+                          className={`appointment-chip${
+                            appointment.status === "CANCELLED" ? " cancelled" : ""
+                          }`}
+                          title={`${appointmentWhen(appointment.date, appointment.time)} · ${
+                            appointment.patientName ?? ""
+                          }`}
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            openEditAppointment(appointment);
+                          }}
+                        >
+                          {appointment.time.slice(0, 5)}{" "}
+                          {appointment.patientName ? shortName(appointment.patientName) : "Приём"}
+                        </button>
+                      ))}
+                      {dayEdd.length > 2 ||
+                      dayCalendarEvents.length > 2 ||
+                      dayAppointments.length > 2 ? (
                         <span className="calendar-more">
-                          +{Math.max(0, dayEdd.length - 2) + Math.max(0, dayCalendarEvents.length - 2)}
+                          +{Math.max(0, dayEdd.length - 2) +
+                            Math.max(0, dayCalendarEvents.length - 2) +
+                            Math.max(0, dayAppointments.length - 2)}
                         </span>
                       ) : null}
                     </div>
@@ -459,11 +708,80 @@ export default function CalendarPage() {
             <span><i className="legend-dot past" />ПДР прошла</span>
             <span><i className="legend-risk" />высокий риск</span>
             <span><i className="legend-event" />событие врача</span>
+            <span><i className="legend-appointment" />приём</span>
             <span className="muted">±1 день · выходные и федеральные праздники</span>
           </div>
         </div>
 
         <aside className="calendar-side">
+          <div className="card">
+            <div className="row between">
+              <h2>Приёмы</h2>
+              <button
+                className="btn btn-sm"
+                type="button"
+                onClick={() => openNewAppointment(selectedDate)}
+              >
+                Записать
+              </button>
+            </div>
+            <p className="muted small" style={{ marginTop: 4 }}>
+              {formatDayTitle(selectedDate)}
+            </p>
+            {appointmentsError ? <ErrorBox message={appointmentsError} /> : null}
+            {selectedAppointments.length === 0 ? (
+              <p className="muted mt">На этот день приёмов нет.</p>
+            ) : (
+              <div className="calendar-event-list mt">
+                {selectedAppointments.map((appointment) => (
+                  <div className="calendar-event-row" key={appointment.id}>
+                    <div className="row between">
+                      <div>
+                        <b className="calendar-event-title">
+                          {appointment.time.slice(0, 5)} ·{" "}
+                          {appointmentTypeLabel(appointment.type)}
+                        </b>
+                        <div className="muted small">
+                          {appointment.patientId ? (
+                            <Link to={`/cabinet/patients/${appointment.patientId}`}>
+                              {appointment.patientName ?? "Пациентка"} ·{" "}
+                              {appointment.patientPublicCode}
+                            </Link>
+                          ) : (
+                            "Без пациентки"
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className={`badge ${
+                          appointment.status === "CANCELLED"
+                            ? "danger"
+                            : patientResponseClass(appointment.patientResponse)
+                        }`}
+                      >
+                        {appointment.status === "CANCELLED"
+                          ? "Отменён"
+                          : patientResponseLabel(appointment.patientResponse)}
+                      </span>
+                    </div>
+                    <div className="row between mt">
+                      <span className="muted small">
+                        {appointment.place ? `Место: ${appointment.place}` : "Место не указано"}
+                      </span>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        type="button"
+                        onClick={() => openEditAppointment(appointment)}
+                      >
+                        Изменить
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="card">
             <div className="row between">
               <h2>События</h2>
@@ -637,6 +955,167 @@ export default function CalendarPage() {
                 onClick={() => setEventDraft(null)}
               >
                 Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {appointmentDraft ? (
+        <div className="modal-backdrop" onClick={() => setAppointmentDraft(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="row between">
+              <h2>{appointmentDraft.id ? "Приём" : "Записать на приём"}</h2>
+              {currentAppointment ? (
+                <span
+                  className={`badge ${
+                    currentAppointment.status === "CANCELLED"
+                      ? "danger"
+                      : patientResponseClass(currentAppointment.patientResponse)
+                  }`}
+                >
+                  {currentAppointment.status === "CANCELLED"
+                    ? "Отменён"
+                    : patientResponseLabel(currentAppointment.patientResponse)}
+                </span>
+              ) : null}
+            </div>
+
+            <Field label="Пациентка">
+              <select
+                value={appointmentDraft.patientId}
+                disabled={Boolean(appointmentDraft.id)}
+                onChange={(event) =>
+                  setAppointmentDraft({ ...appointmentDraft, patientId: event.target.value })
+                }
+              >
+                <option value="">Выберите пациентку</option>
+                {patientOptions.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.fullName} · {patient.publicCode}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="grid two">
+              <Field label="Дата">
+                <input
+                  type="date"
+                  value={appointmentDraft.date}
+                  onChange={(event) =>
+                    setAppointmentDraft({ ...appointmentDraft, date: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Время">
+                <input
+                  type="time"
+                  value={appointmentDraft.time}
+                  onChange={(event) =>
+                    setAppointmentDraft({ ...appointmentDraft, time: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Длительность, мин">
+                <input
+                  type="number"
+                  min={10}
+                  max={240}
+                  step={5}
+                  value={appointmentDraft.durationMinutes}
+                  onChange={(event) =>
+                    setAppointmentDraft({
+                      ...appointmentDraft,
+                      durationMinutes: event.target.value
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Тип">
+                <select
+                  value={appointmentDraft.type}
+                  onChange={(event) =>
+                    setAppointmentDraft({
+                      ...appointmentDraft,
+                      type: event.target.value as AppointmentType
+                    })
+                  }
+                >
+                  {APPOINTMENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {appointmentTypeLabel(type)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Место / кабинет">
+              <input
+                value={appointmentDraft.place}
+                onChange={(event) =>
+                  setAppointmentDraft({ ...appointmentDraft, place: event.target.value })
+                }
+                placeholder="Например, кабинет 12"
+                maxLength={255}
+              />
+            </Field>
+            <Field label="Комментарий для пациентки">
+              <textarea
+                value={appointmentDraft.comment}
+                onChange={(event) =>
+                  setAppointmentDraft({ ...appointmentDraft, comment: event.target.value })
+                }
+                placeholder="Что взять с собой, как подготовиться"
+                maxLength={2000}
+              />
+            </Field>
+
+            {appointmentConflict && currentAppointment?.status !== "CANCELLED" ? (
+              <p className="notice">
+                В это время уже есть приём:{" "}
+                {appointmentWhen(appointmentConflict.date, appointmentConflict.time)} ·{" "}
+                {appointmentConflict.patientName ?? "без пациентки"}. Можно сохранить, но
+                расписание пересекается.
+              </p>
+            ) : null}
+            {appointmentFormError ? <ErrorBox message={appointmentFormError} /> : null}
+
+            <div className="row mt">
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={savingAppointment || currentAppointment?.status === "CANCELLED"}
+                onClick={() => void saveAppointment()}
+              >
+                {savingAppointment ? "Сохраняем…" : "Сохранить"}
+              </button>
+              {currentAppointment?.status === "SCHEDULED" ? (
+                <button
+                  className="btn btn-soft-danger"
+                  type="button"
+                  disabled={savingAppointment}
+                  onClick={() => void cancelAppointment()}
+                >
+                  Отменить приём
+                </button>
+              ) : null}
+              {currentAppointment && currentAppointment.status !== "CANCELLED" ? (
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => downloadAppointmentIcs(currentAppointment)}
+                >
+                  В календарь
+                </button>
+              ) : null}
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setAppointmentDraft(null)}
+              >
+                Закрыть
               </button>
             </div>
           </div>

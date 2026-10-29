@@ -14,6 +14,7 @@
 - проходит анкету из 9 тревожных симптомов;
 - ведёт счётчик схваток и получает подсказку, когда ехать в роддом;
 - читает развитие плода и питание по неделям;
+- видит записи на приём, подтверждает участие, сообщает «не смогу прийти», получает напоминание за 24 часа и скачивает `.ics`;
 - переписывается с врачом внутри приложения.
 
 Врач:
@@ -23,6 +24,7 @@
 - получает нейтральные уведомления в Telegram или MAX и разбирает события в кабинете;
 - настраивает пороги АД и глюкозы для конкретной пациентки;
 - ведёт календарь ПДР и личные события, в том числе с привязкой к пациентке;
+- записывает пациентку на приём, видит подтверждение или отказ, отменяет и переносит запись;
 - видит календарь ПДР с окном ±1 день, цветами по сроку, риском и переходом в карточку;
 - проходит встроенное обучение и чек-лист первых шагов;
 - ведёт переписку с пациенткой.
@@ -226,7 +228,8 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 Пациентка (Bearer):
 - `GET /api/patient/me`, `GET /api/patient/profile`;
 - `GET /api/patient/invite/{token}`, `POST /api/patient/invite/{token}/confirm`;
-- `GET/POST /api/patient/diary`, `GET /api/patient/diary/today`;
+- `GET /api/patient/diary`, `POST /api/patient/diary`, `GET /api/patient/diary/today`;
+- `GET /api/patient/appointments`, `POST /api/patient/appointments/{id}/confirm|decline`;
 - `GET /api/patient/gain`;
 - `GET /api/patient/content/current`, `GET /api/patient/content/{week}`;
 - `POST /api/patient/symptoms`, `GET /api/patient/symptoms/history`;
@@ -244,6 +247,7 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 - `PUT /api/doctor/patients/{id}/thresholds`;
 - `GET /api/doctor/alerts`, `POST /api/doctor/alerts/{id}/ack|close`;
 - `GET/POST /api/doctor/calendar/events`, `PUT/DELETE /api/doctor/calendar/events/{id}`;
+- `GET/POST /api/doctor/appointments`, `PUT /api/doctor/appointments/{id}`, `POST /api/doctor/appointments/{id}/cancel`;
 - `POST /api/doctor/messenger-link`.
 
 Админ (Bearer):
@@ -300,5 +304,6 @@ mvn test
 - Нет круглосуточной дежурной смены и SLA; пациентка всегда получает 103/112.
 - Контент по неделям и рационы — демонстрационные, требуют замены на утверждённые клиникой.
 - Нет интеграции с МИС/ЕГИСЗ.
+- Синхронизация календаря с Google/Outlook — только через скачивание `.ics`, без OAuth и webcal.
 - Нет внешнего QR пациентки для другого врача — следующая итерация.
 - Уведомления отправляются только при запущенном планировщике; несколько инстансов не поддерживаются (single instance).

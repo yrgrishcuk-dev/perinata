@@ -37,11 +37,19 @@ public class AlertService {
     @Transactional
     public AlarmEvent raise(PatientCard card, AlarmType type, Severity severity,
                             Object payload, Duration dedupeWindow) {
+        return raise(card, type, severity, payload, dedupeWindow, null);
+    }
+
+    @Transactional
+    public AlarmEvent raise(PatientCard card, AlarmType type, Severity severity,
+                            Object payload, Duration dedupeWindow, String doctorMessage) {
         Instant after = Instant.now().minus(dedupeWindow);
         List<AlarmStatus> dedupeStatuses = type == AlarmType.MISSED_DIARY
                 ? List.of(AlarmStatus.NEW, AlarmStatus.ACKED, AlarmStatus.CLOSED)
                 : List.of(AlarmStatus.NEW, AlarmStatus.ACKED);
-        AlarmEvent existing = alarmEventRepository
+        AlarmEvent existing = type == AlarmType.APPOINTMENT_RESPONSE
+                ? null
+                : alarmEventRepository
                 .findFirstByPatientCardIdAndTypeAndStatusInAndCreatedAtAfterOrderByCreatedAtDesc(
                         card.getId(), type, dedupeStatuses, after)
                 .orElse(null);
@@ -60,9 +68,10 @@ public class AlertService {
                 ? "Тревожное событие"
                 : severity == Severity.WARNING ? "Событие" : "Пометка";
         if (type != AlarmType.MISSED_DIARY) {
-            notificationService.notifyDoctor(card,
-                    prefix + " по карточке " + card.getPublicCode() + ". Откройте кабинет.",
-                    "alert:" + alarm.getId() + ":doctor");
+            String message = doctorMessage != null
+                    ? doctorMessage
+                    : prefix + " по карточке " + card.getPublicCode() + ". Откройте кабинет.";
+            notificationService.notifyDoctor(card, message, "alert:" + alarm.getId() + ":doctor");
         }
 
         auditService.log("SYSTEM", null, "ALARM_CREATE", "ALARM",

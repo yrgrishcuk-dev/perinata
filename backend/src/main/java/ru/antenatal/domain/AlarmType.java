@@ -7,5 +7,6 @@ public enum AlarmType {
     CONTRACTION,
     WEIGHT,
     MISSED_DIARY,
-    WATERS
+    WATERS,
+    APPOINTMENT_RESPONSE
 }

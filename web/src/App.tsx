@@ -6,6 +6,7 @@ import MiniLayout from "./mini/MiniLayout";
 import ConnectPage from "./mini/ConnectPage";
 import InvitePage from "./mini/InvitePage";
 import HomePage from "./mini/HomePage";
+import AppointmentsPage from "./mini/AppointmentsPage";
 import DiaryPage from "./mini/DiaryPage";
 import SymptomsPage from "./mini/SymptomsPage";
 import ContractionsPage from "./mini/ContractionsPage";
@@ -99,6 +100,7 @@ export default function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="diary" element={<DiaryPage />} />
         <Route path="symptoms" element={<SymptomsPage />} />
         <Route path="contractions" element={<ContractionsPage />} />

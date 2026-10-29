@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { AppointmentCard } from "../components/AppointmentCard";
 import { GainChart } from "../components/GainChart";
+import { request } from "../api";
 import { usePatient } from "../session";
 import {
   formatDate,
   gainStatusClass,
   gainStatusLabel
 } from "../format";
-import type { DiaryView } from "../types";
+import type { DiaryView, PatientResponse } from "../types";
 
 function diarySummary(entry: DiaryView): string {
   const parts: string[] = [];
@@ -26,8 +29,35 @@ function diarySummary(entry: DiaryView): string {
 }
 
 export default function HomePage() {
-  const { me } = usePatient();
+  const { me, token, refresh } = usePatient();
+  const [busy, setBusy] = useState(false);
+  const [appointmentError, setAppointmentError] = useState<string | null>(null);
   const home = me?.home;
+
+  const respondAppointment = async (
+    response: Extract<PatientResponse, "CONFIRMED" | "DECLINED">
+  ) => {
+    const appointment = me?.home?.nextAppointment;
+    if (!token || !appointment) {
+      return;
+    }
+    setBusy(true);
+    setAppointmentError(null);
+    try {
+      await request(
+        `/api/patient/appointments/${appointment.id}/${
+          response === "CONFIRMED" ? "confirm" : "decline"
+        }`,
+        { method: "POST", token }
+      );
+      await refresh();
+    } catch (e) {
+      setAppointmentError(e instanceof Error ? e.message : "Не удалось сохранить ответ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!home) {
     return null;
   }
@@ -52,6 +82,26 @@ export default function HomePage() {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="row between">
+          <h2>Ближайший приём</h2>
+          <Link className="btn btn-ghost btn-sm" to="/app/appointments">
+            Все приёмы
+          </Link>
+        </div>
+        {home.nextAppointment ? (
+          <AppointmentCard
+            appointment={home.nextAppointment}
+            onRespond={(response) => void respondAppointment(response)}
+            busy={busy}
+            compact
+          />
+        ) : (
+          <p className="muted mt">Приёмов пока нет.</p>
+        )}
+        {appointmentError ? <p className="field-error">{appointmentError}</p> : null}
       </div>
 
       <div className="card">

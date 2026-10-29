@@ -1,4 +1,11 @@
-import type { AlarmType, BmiCategory, Severity } from "./types";
+import type {
+  AlarmType,
+  AppointmentStatus,
+  AppointmentType,
+  BmiCategory,
+  PatientResponse,
+  Severity
+} from "./types";
 
 export function formatDate(value?: string | null): string {
   if (!value) {
@@ -35,6 +42,51 @@ export function todayIso(): string {
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+export function appointmentTypeLabel(type: AppointmentType): string {
+  switch (type) {
+    case "VISIT":
+      return "Приём";
+    case "ULTRASOUND":
+      return "УЗИ";
+    case "TESTS":
+      return "Анализы";
+    case "OTHER":
+      return "Другое";
+    default:
+      return type;
+  }
+}
+
+export function appointmentStatusLabel(status: AppointmentStatus): string {
+  return status === "CANCELLED" ? "Отменён" : "Запланирован";
+}
+
+export function patientResponseLabel(response: PatientResponse): string {
+  switch (response) {
+    case "CONFIRMED":
+      return "Подтверждён";
+    case "DECLINED":
+      return "Не сможет прийти";
+    default:
+      return "Ожидает подтверждения";
+  }
+}
+
+export function patientResponseClass(response: PatientResponse): string {
+  switch (response) {
+    case "CONFIRMED":
+      return "ok";
+    case "DECLINED":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+export function appointmentWhen(date: string, time: string): string {
+  return `${formatDate(date)} в ${time.slice(0, 5)}`;
 }
 
 export function bmiCategoryLabel(category?: BmiCategory | null): string {
@@ -94,6 +146,8 @@ export function alarmTypeLabel(type: AlarmType): string {
       return "Пропуск дневника";
     case "WATERS":
       return "Отошли воды";
+    case "APPOINTMENT_RESPONSE":
+      return "Ответ на приём";
     default:
       return type;
   }
