@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { PatientProvider, StaffProvider } from "./session";
+import LandingPage from "./landing/LandingPage";
 import MiniLayout from "./mini/MiniLayout";
 import ConnectPage from "./mini/ConnectPage";
 import InvitePage from "./mini/InvitePage";
@@ -70,7 +71,7 @@ export default function App() {
     <>
       <StartParamRedirect />
       <Routes>
-      <Route path="/" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<LandingPage />} />
 
       <Route
         path="/connect"

@@ -12,6 +12,8 @@ import org.springframework.web.util.HtmlUtils;
 import ru.antenatal.config.AppProperties;
 import ru.antenatal.service.LinkService;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 public class PublicController {
@@ -61,6 +63,11 @@ public class PublicController {
                 .body(page("Приглашение от врача",
                         "Выберите мессенджер, чтобы подтвердить привязку карточки.",
                         buttons.toString()));
+    }
+
+    @GetMapping("/api/public/config")
+    public Map<String, String> config() {
+        return Map.of("telegramBotUsername", appProperties.getBot().getUsername());
     }
 
     private String page(String title, String subtitle, String buttonsHtml) {
