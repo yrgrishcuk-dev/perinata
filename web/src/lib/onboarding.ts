@@ -30,7 +30,7 @@ export const ONBOARDING_STEPS: OnboardingStepInfo[] = [
   },
   {
     key: "calendar",
-    title: "Откройте календарь ПДР",
+    title: "Откройте календарь",
     description: "Планируйте выходные и праздники вокруг предполагаемых дат родов.",
     to: "/cabinet/calendar",
     auto: true

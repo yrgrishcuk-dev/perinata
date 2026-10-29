@@ -54,7 +54,7 @@ export default function CabinetLayout() {
           Пациентки
         </NavLink>
         <NavLink to="/cabinet/calendar" className={({ isActive }) => (isActive ? "active" : "")}>
-          Календарь ПДР
+          Календарь
         </NavLink>
         <NavLink to="/cabinet/alerts" className={({ isActive }) => (isActive ? "active" : "")}>
           События
