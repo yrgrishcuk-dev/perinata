@@ -17,7 +17,7 @@ public class TelegramBotConfigurer {
 
     private static final String MENU_TEXT = "Открыть приложение";
     private static final String DESCRIPTION =
-            "Помощник для беременных: дневник, симптомы, связь с врачом.";
+            "Помощник беременной: дневник, симптомы, связь с врачом.";
     private static final String SHORT_DESCRIPTION =
             "Дневник беременности и связь с врачом.";
 

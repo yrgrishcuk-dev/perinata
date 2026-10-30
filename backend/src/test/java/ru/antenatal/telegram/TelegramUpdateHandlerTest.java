@@ -49,10 +49,10 @@ class TelegramUpdateHandlerTest {
     }
 
     @Test
-    void helpExplainsStartAndAppDifference() throws Exception {
+    void helpShowsCommands() throws Exception {
         handler.handle(update("/help"));
 
-        verify(telegramClient).sendMessage(eq("10"), contains("Чем отличаются /start и /app"), any());
+        verify(telegramClient).sendMessage(eq("10"), contains("Помощник беременной."), any());
         verify(telegramClient).sendMessage(eq("10"), contains("/stop — отключить уведомления"), any());
     }
 
