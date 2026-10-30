@@ -34,6 +34,12 @@ public class LinkService {
 
     public static final String CONSENT_VERSION = "2026-10-v1";
 
+    public record BotStatus(boolean patient, boolean doctor, String publicCode) {
+    }
+
+    public record UnlinkResult(boolean patient, boolean doctor) {
+    }
+
     private final LinkTokenRepository linkTokenRepository;
     private final DoctorLinkTokenRepository doctorLinkTokenRepository;
     private final PatientAccountRepository patientAccountRepository;
@@ -205,6 +211,51 @@ public class LinkService {
     }
 
     @Transactional(readOnly = true)
+    public BotStatus botStatus(Platform platform, String platformUserId) {
+        Optional<PatientAccount> patient = patientAccountRepository
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId);
+        Optional<DoctorMessenger> doctor = doctorMessengerRepository
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId);
+        String publicCode = patient
+                .flatMap(account -> patientCardRepository.findById(account.getPatientCardId()))
+                .map(PatientCard::getPublicCode)
+                .orElse(null);
+        return new BotStatus(patient.isPresent(), doctor.isPresent(), publicCode);
+    }
+
+    @Transactional
+    public UnlinkResult unlinkByMessenger(Platform platform, String platformUserId) {
+        boolean patient = false;
+        boolean doctor = false;
+
+        Optional<PatientAccount> account = patientAccountRepository
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId);
+        if (account.isPresent()) {
+            PatientAccount value = account.get();
+            value.setRevokedAt(Instant.now());
+            patientAccountRepository.save(value);
+            revokeUnusedLinkTokens(value.getPatientCardId());
+            auditService.log("PATIENT", platformUserId, "BOT_UNLINK",
+                    "PATIENT_CARD", String.valueOf(value.getPatientCardId()),
+                    "platform=" + platform);
+            patient = true;
+        }
+
+        Optional<DoctorMessenger> messenger = doctorMessengerRepository
+                .findByPlatformAndPlatformUserIdAndRevokedAtIsNull(platform, platformUserId);
+        if (messenger.isPresent()) {
+            DoctorMessenger value = messenger.get();
+            value.setRevokedAt(Instant.now());
+            doctorMessengerRepository.save(value);
+            auditService.log("DOCTOR", String.valueOf(value.getDoctorId()), "BOT_UNLINK",
+                    "DOCTOR", String.valueOf(value.getDoctorId()), "platform=" + platform);
+            doctor = true;
+        }
+
+        return new UnlinkResult(patient, doctor);
+    }
+
+    @Transactional(readOnly = true)
     public Optional<LinkToken> findValid(String rawToken) {
         return linkTokenRepository.findByTokenHash(TokenUtil.sha256(rawToken))
                 .filter(token -> token.getUsedAt() == null)
@@ -220,5 +271,13 @@ public class LinkService {
     private void markUsed(LinkToken token) {
         token.setUsedAt(Instant.now());
         linkTokenRepository.save(token);
+    }
+
+    private void revokeUnusedLinkTokens(Long patientCardId) {
+        linkTokenRepository.findByPatientCardIdAndUsedAtIsNullAndRevokedAtIsNull(patientCardId)
+                .forEach(token -> {
+                    token.setRevokedAt(Instant.now());
+                    linkTokenRepository.save(token);
+                });
     }
 }

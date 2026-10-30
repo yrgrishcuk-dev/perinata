@@ -143,25 +143,23 @@ Vite проксирует `/api` и `/l` на `http://localhost:8080`. Откр�
    - `TELEGRAM_WEBHOOK_SECRET` (случайная строка);
    - `PUBLIC_BASE_URL=https://<домен>`.
 3. Домен должен быть доступен по HTTPS. В `@BotFather` выполните `/setdomain` и укажите домен — это нужно для WebApp-кнопок.
-4. Установите webhook:
+4. Webhook не нужен: `deploy/telegram-poller.py` использует long polling и передаёт обновления во внутренний endpoint. `TELEGRAM_WEBHOOK_SECRET` остаётся секретом этого внутреннего вызова.
+5. При старте backend автоматически задаёт команды, описание и кнопку меню через Bot API. Проверка:
 
 ```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<DOMAIN>/api/telegram/webhook/<SECRET>&secret_token=<SECRET>"
+curl "https://api.telegram.org/bot<TOKEN>/getMyCommands"
+curl "https://api.telegram.org/bot<TOKEN>/getChatMenuButton"
 ```
 
-5. Кнопка меню:
+Команды бота:
 
-```bash
-curl -X POST "https://api.telegram.org/bot<TOKEN>/setChatMenuButton" \
-  -H "Content-Type: application/json" \
-  -d '{"menu_button":{"type":"web_app","text":"Открыть","web_app":{"url":"https://<DOMAIN>/app"}}}'
-```
+- `/start` — меню, инструкция и привязка по QR;
+- `/app` — сразу открыть приложение;
+- `/help` — инструкция и список команд;
+- `/status` — проверить, подключён ли чат;
+- `/stop` — отключить уведомления, подтверждение `/stop confirm`.
 
-Проверка webhook:
-
-```bash
-curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
-```
+`/stop` не удаляет историю чата: Telegram не позволяет боту очистить всю переписку. Историю пользователь очищает вручную в меню чата.
 
 ## Настройка MAX
 
