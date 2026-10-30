@@ -2089,3 +2089,13 @@ th {
   }
 }
 
+
+.help-section code {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+

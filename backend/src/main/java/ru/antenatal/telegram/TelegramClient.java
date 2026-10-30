@@ -35,16 +35,45 @@ public class TelegramClient {
         if (token == null || token.isBlank() || chatId == null || chatId.isBlank()) {
             return false;
         }
+        Map<String, Object> body = new HashMap<>();
+        body.put("chat_id", chatId);
+        body.put("text", text);
+        body.put("disable_web_page_preview", true);
+        if (replyMarkup != null) {
+            body.put("reply_markup", replyMarkup);
+        }
+        return call("sendMessage", body);
+    }
+
+    public boolean setMyCommands(List<Map<String, String>> commands) {
+        return call("setMyCommands", Map.of("commands", commands));
+    }
+
+    public boolean setMyDescription(String description) {
+        return call("setMyDescription", Map.of("description", description));
+    }
+
+    public boolean setMyShortDescription(String description) {
+        return call("setMyShortDescription", Map.of("short_description", description));
+    }
+
+    public boolean setChatMenuButton(String text, String url) {
+        Map<String, Object> webApp = Map.of("url", url);
+        Map<String, Object> menuButton = Map.of(
+                "type", "web_app",
+                "text", text,
+                "web_app", webApp);
+        return call("setChatMenuButton", Map.of("menu_button", menuButton));
+    }
+
+    public boolean call(String method, Object body) {
+        String token = appProperties.getBot().getToken();
+        if (token == null || token.isBlank()) {
+            return false;
+        }
         try {
-            Map<String, Object> body = new HashMap<>();
-            body.put("chat_id", chatId);
-            body.put("text", text);
-            body.put("disable_web_page_preview", true);
-            if (replyMarkup != null) {
-                body.put("reply_markup", replyMarkup);
-            }
             restClient.post()
-                    .uri("/bot" + token + "/sendMessage")
+                    .uri("/bot" + token + "/" + method)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -52,7 +81,7 @@ public class TelegramClient {
             return true;
         } catch (Exception e) {
             // Не логируем URI: в нём находится токен бота.
-            log.warn("Telegram send failed: {}", e.getClass().getSimpleName());
+            log.warn("Telegram {} failed: {}", method, e.getClass().getSimpleName());
             return false;
         }
     }
