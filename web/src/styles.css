@@ -2077,3 +2077,15 @@ th {
   }
 }
 
+
+@media (max-width: 860px) {
+  .tabs {
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
+  }
+
+  .tabs button {
+    scroll-snap-align: center;
+  }
+}
+

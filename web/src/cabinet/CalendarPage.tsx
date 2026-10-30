@@ -228,7 +228,7 @@ export default function CalendarPage() {
     setAppointmentDraft({
       patientId: searchParams.get("patientId") ?? "",
       date: searchParams.get("date") ?? toIsoDate(today),
-      time: "",
+      time: "09:00",
       durationMinutes: "30",
       type: "VISIT",
       place: "",
