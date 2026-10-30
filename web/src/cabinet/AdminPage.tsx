@@ -120,7 +120,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <h1 style={{ fontSize: 24 }}>Врачи</h1>
         <button className="btn" onClick={() => void load()}>
           Обновить
@@ -171,7 +171,7 @@ export default function AdminPage() {
 
       <div className="card">
         <h2>Список</h2>
-        <div className="table-wrap mt">
+        <div className="table-wrap doctors-table mt">
           <table>
             <thead>
               <tr>
@@ -214,6 +214,36 @@ export default function AdminPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="doctors-cards mt">
+          {doctors.map((doctor) => (
+            <div className="doctor-card" key={doctor.id}>
+              <div className="row between">
+                <b>{doctor.fullName}</b>
+                {doctor.status === "ACTIVE" ? (
+                  <span className="badge ok">Активен</span>
+                ) : (
+                  <span className="badge neutral">Отключён</span>
+                )}
+              </div>
+              <div className="muted small" style={{ marginTop: 4, overflowWrap: "anywhere" }}>
+                {doctor.email} · {doctor.role === "ADMIN" ? "Админ" : "Врач"}
+              </div>
+              <div className="muted small" style={{ marginTop: 6 }}>
+                Уведомления: {doctor.messengerLinked ? "да" : "нет"} · Вход:{" "}
+                {formatDateTime(doctor.lastLoginAt)}
+              </div>
+              <div className="row mt">
+                <button className="btn btn-sm" onClick={() => void resetPassword(doctor)}>
+                  Сбросить пароль
+                </button>
+                <button className="btn btn-sm" onClick={() => void toggle(doctor)}>
+                  {doctor.status === "ACTIVE" ? "Отключить" : "Включить"}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </>

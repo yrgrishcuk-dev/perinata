@@ -42,12 +42,13 @@ export default function AuditPage() {
 
   return (
     <>
-      <h1 style={{ fontSize: 24, marginBottom: 16 }}>Аудит</h1>
+      <h1 className="page-head" style={{ fontSize: 24, marginBottom: 16 }}>Аудит</h1>
       <div className="card">
         {logs.length === 0 ? (
           <p className="muted">Записей нет.</p>
         ) : (
-          <div className="table-wrap">
+          <>
+            <div className="table-wrap audit-table">
             <table>
               <thead>
                 <tr>
@@ -79,6 +80,31 @@ export default function AuditPage() {
               </tbody>
             </table>
           </div>
+          <div className="audit-cards mt">
+            {logs.map((log) => (
+              <div className="audit-card" key={log.id}>
+                <div className="row between">
+                  <b>{log.action}</b>
+                  <span className="muted small">{formatDateTime(log.createdAt)}</span>
+                </div>
+                <div className="muted small" style={{ marginTop: 6 }}>
+                  Кто: {log.actorType}
+                  {log.actorId ? ` #${log.actorId}` : ""} · Объект: {log.entityType ?? "—"}
+                  {log.entityId ? ` #${log.entityId}` : ""}
+                </div>
+                <div className="muted small">IP: {log.ip ?? "—"}</div>
+                {log.metadata ? (
+                  <p
+                    className="mono small mt"
+                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                  >
+                    {log.metadata}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </div>
     </>

@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <h1 style={{ fontSize: 24 }}>Обзор</h1>
         <Link className="btn btn-primary" to="/cabinet/patients">
           Пациентки
@@ -96,7 +96,8 @@ export default function DashboardPage() {
         {alerts.length === 0 ? (
           <p className="muted mt">Новых событий нет.</p>
         ) : (
-          <div className="table-wrap mt">
+          <>
+            <div className="table-wrap dashboard-alerts-table mt">
             <table>
               <thead>
                 <tr>
@@ -135,6 +136,28 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="alerts-cards mt">
+            {alerts.slice(0, 8).map((alert) => (
+              <div className="list-item" key={alert.id}>
+                <div className="row between">
+                  <b>{alert.patientName}</b>
+                  <SeverityBadge severity={alert.severity} />
+                </div>
+                <div className="muted small" style={{ marginTop: 4 }}>
+                  {formatDateTime(alert.createdAt)} · {alarmTypeLabel(alert.type)}
+                </div>
+                <div className="row between mt">
+                  <AlarmStatusBadge status={alert.status} />
+                  {alert.patientId ? (
+                    <Link className="btn btn-sm" to={`/cabinet/patients/${alert.patientId}`}>
+                      Открыть
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </div>
 
