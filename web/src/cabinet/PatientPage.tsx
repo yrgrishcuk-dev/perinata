@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { GainChart } from "../components/GainChart";
@@ -70,9 +70,21 @@ export default function PatientPage() {
 
   const [details, setDetails] = useState<PatientDetails | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
+  const tabsRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const changeTab = (next: Tab) => {
+    setTab(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector<HTMLButtonElement>("button.active")
+      ?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [tab]);
 
   const [diary, setDiary] = useState<DiaryView[]>([]);
   const [alerts, setAlerts] = useState<AlertView[]>([]);
@@ -416,14 +428,14 @@ export default function PatientPage() {
               <button type="button" onClick={() => void createLink()}>
                 QR для привязки
               </button>
-              <button type="button" onClick={() => setTab("settings")}>
+              <button type="button" onClick={() => changeTab("settings")}>
                 Настройки
               </button>
             </ActionMenu>
           </div>
         </div>
 
-        <div className="tabs">
+        <div className="tabs" ref={tabsRef}>
           {(
             [
               ["overview", "Обзор"],
@@ -436,7 +448,7 @@ export default function PatientPage() {
             <button
               key={key}
               className={tab === key ? "active" : ""}
-              onClick={() => setTab(key)}
+              onClick={() => changeTab(key)}
               type="button"
             >
               {label}
@@ -456,7 +468,7 @@ export default function PatientPage() {
                 Рост и вес до беременности не заполнены — ИМТ и коридор прибавки не
                 рассчитываются.
               </div>
-              <button className="btn btn-sm mt" type="button" onClick={() => setTab("settings")}>
+              <button className="btn btn-sm mt" type="button" onClick={() => changeTab("settings")}>
                 Заполнить
               </button>
             </div>
