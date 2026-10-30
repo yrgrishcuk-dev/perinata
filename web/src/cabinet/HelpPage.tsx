@@ -14,7 +14,7 @@ export default function HelpPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <div>
           <h1 style={{ fontSize: 24 }}>Обучение</h1>
           <p className="muted small" style={{ marginTop: 4 }}>

@@ -130,7 +130,7 @@ export default function PatientsPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <h1 style={{ fontSize: 24 }}>Пациентки</h1>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
           Новая пациентка
@@ -150,7 +150,7 @@ export default function PatientsPage() {
         {filtered.length === 0 ? (
           <p className="muted">Пациенток пока нет. Создайте первую карточку.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap patients-table">
             <table>
               <thead>
                 <tr>
@@ -202,6 +202,55 @@ export default function PatientsPage() {
             </table>
           </div>
         )}
+
+        {filtered.length > 0 ? (
+          <div className="patients-cards">
+            {filtered.map((patient) => (
+              <Link
+                className="patient-card"
+                key={patient.id}
+                to={`/cabinet/patients/${patient.id}`}
+              >
+                <div className="row between">
+                  <div>
+                    <b>{patient.fullName}</b>
+                    <div className="muted small mono">{patient.publicCode}</div>
+                  </div>
+                  <RiskBadge risk={patient.riskGroup} />
+                </div>
+                <div className="patient-card-meta">
+                  <div>
+                    <span className="muted small">Срок</span>
+                    <b>{patient.gestationalAge}</b>
+                  </div>
+                  <div>
+                    <span className="muted small">ПДР</span>
+                    <b>{formatDate(patient.edd)}</b>
+                  </div>
+                  <div>
+                    <span className="muted small">Дневник</span>
+                    <b>{patient.lastDiaryDate ? formatDate(patient.lastDiaryDate) : "—"}</b>
+                  </div>
+                  <div>
+                    <span className="muted small">Привязка</span>
+                    <b>{patient.bound ? "Да" : "Нет"}</b>
+                  </div>
+                </div>
+                <div className="row between mt">
+                  <span>
+                    События:{" "}
+                    {patient.openAlerts > 0 ? (
+                      <span className="badge danger">{patient.openAlerts}</span>
+                    ) : (
+                      <span className="badge neutral">0</span>
+                    )}
+                  </span>
+                  <span className="btn btn-sm">Открыть</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {showCreate ? (

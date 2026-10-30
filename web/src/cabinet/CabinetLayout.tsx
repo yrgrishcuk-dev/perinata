@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ErrorBox, Spinner } from "../components/ui";
 import { request } from "../api";
 import { useStaff } from "../session";
@@ -8,9 +8,15 @@ import type { MessengerLinkResponse } from "../types";
 export default function CabinetLayout() {
   const { me, loading, logout, token } = useStaff();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messenger, setMessenger] = useState<MessengerLinkResponse | null>(null);
   const [messengerPlatform, setMessengerPlatform] = useState<"TELEGRAM" | "MAX">("TELEGRAM");
   const [error, setError] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -90,7 +96,8 @@ export default function CabinetLayout() {
           <div>
             <b>{me.fullName}</b>
             <div className="muted small">
-              {me.role === "ADMIN" ? "Администратор" : "Врач"} · {me.email}
+              {me.role === "ADMIN" ? "Администратор" : "Врач"}
+              <span className="header-email"> · {me.email}</span>
             </div>
           </div>
           <div className="row">
@@ -111,6 +118,85 @@ export default function CabinetLayout() {
           <Outlet />
         </main>
       </div>
+
+      <nav className="mobile-nav" aria-label="Разделы кабинета">
+        <NavLink to="/cabinet" end className={({ isActive }) => (isActive ? "active" : "")}>
+          Обзор
+        </NavLink>
+        <NavLink
+          to="/cabinet/patients"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          Пациентки
+        </NavLink>
+        <NavLink
+          to="/cabinet/calendar"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          Календарь
+        </NavLink>
+        <NavLink
+          to="/cabinet/alerts"
+          className={({ isActive }) => (isActive ? "active" : "")}
+        >
+          События
+        </NavLink>
+        <button type="button" onClick={() => setMoreOpen(true)}>
+          Ещё
+        </button>
+      </nav>
+
+      {moreOpen ? (
+        <div className="modal-backdrop" onClick={() => setMoreOpen(false)}>
+          <div className="modal mobile-sheet" onClick={(event) => event.stopPropagation()}>
+            <h2>Ещё</h2>
+            <div className="mobile-sheet-list mt">
+              <Link to="/cabinet/help" onClick={() => setMoreOpen(false)}>
+                Обучение
+              </Link>
+              {me.role === "ADMIN" ? (
+                <Link to="/cabinet/admin" onClick={() => setMoreOpen(false)}>
+                  Врачи
+                </Link>
+              ) : null}
+              {me.role === "ADMIN" ? (
+                <Link to="/cabinet/audit" onClick={() => setMoreOpen(false)}>
+                  Аудит
+                </Link>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  void connectMessenger("TELEGRAM");
+                }}
+              >
+                Уведомления в Telegram
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  void connectMessenger("MAX");
+                }}
+              >
+                Уведомления в MAX
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={async () => {
+                  setMoreOpen(false);
+                  await logout();
+                  navigate("/cabinet/login", { replace: true });
+                }}
+              >
+                Выйти
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {messenger ? (
         <div className="modal-backdrop" onClick={() => setMessenger(null)}>

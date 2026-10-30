@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
+import { ActionMenu } from "../components/ActionMenu";
 import { request } from "../api";
 import {
   appointmentTypeLabel,
@@ -535,15 +536,15 @@ export default function CalendarPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <div>
           <h1 style={{ fontSize: 24 }}>Календарь</h1>
-          <p className="muted small" style={{ marginTop: 4 }}>
+          <p className="muted small page-subtitle" style={{ marginTop: 4 }}>
             ПДР ±1 день · пациенток: {patients.length} · приёмов: {appointments.length} ·
             событий: {calendarEvents.length}
           </p>
         </div>
-        <div className="row">
+        <div className="row desktop-actions">
           <button
             className="btn btn-primary btn-sm"
             type="button"
@@ -561,6 +562,24 @@ export default function CalendarPage() {
             Обновить
           </button>
         </div>
+        <div className="mobile-actions row">
+          <button
+            className="btn btn-primary btn-sm"
+            type="button"
+            onClick={() => openNewAppointment(selectedDate)}
+          >
+            Приём
+          </button>
+          <ActionMenu>
+            <button type="button" onClick={() => openNewEvent(selectedDate)}>
+              Добавить событие
+            </button>
+            <Link to="/cabinet/patients">Пациентки</Link>
+            <button type="button" onClick={() => void load()}>
+              Обновить
+            </button>
+          </ActionMenu>
+        </div>
       </div>
 
       {error ? <ErrorBox message={error} /> : null}
@@ -568,16 +587,28 @@ export default function CalendarPage() {
       <div className="calendar-layout">
         <div className="card calendar-card">
           <div className="row between calendar-toolbar">
-            <button className="btn btn-sm" type="button" onClick={() => changeMonth(-1)}>
-              ← Назад
+            <button
+              className="btn btn-sm"
+              type="button"
+              aria-label="Предыдущий месяц"
+              onClick={() => changeMonth(-1)}
+            >
+              <span className="desktop-label">← Назад</span>
+              <span className="mobile-label">‹</span>
             </button>
             <h2 style={{ fontSize: 18 }}>{formatMonthTitle(month)}</h2>
             <div className="row">
               <button className="btn btn-sm" type="button" onClick={goToday}>
                 Сегодня
               </button>
-              <button className="btn btn-sm" type="button" onClick={() => changeMonth(1)}>
-                Вперёд →
+              <button
+                className="btn btn-sm"
+                type="button"
+                aria-label="Следующий месяц"
+                onClick={() => changeMonth(1)}
+              >
+                <span className="desktop-label">Вперёд →</span>
+                <span className="mobile-label">›</span>
               </button>
             </div>
           </div>
@@ -692,6 +723,28 @@ export default function CalendarPage() {
                           +{Math.max(0, dayEdd.length - 2) +
                             Math.max(0, dayCalendarEvents.length - 2) +
                             Math.max(0, dayAppointments.length - 2)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div
+                      className="calendar-day-dots"
+                      aria-label={`Приёмов: ${dayAppointments.length}, ПДР: ${dayEdd.length}, событий: ${dayCalendarEvents.length}`}
+                    >
+                      {dayAppointments.length > 0 ? (
+                        <span className="day-dot appointment" />
+                      ) : null}
+                      {dayEdd.length > 0 ? <span className="day-dot edd" /> : null}
+                      {dayCalendarEvents.length > 0 ? (
+                        <span className="day-dot event" />
+                      ) : null}
+                      {dayAppointments.length +
+                        dayEdd.length +
+                        dayCalendarEvents.length >
+                      3 ? (
+                        <span className="calendar-day-count">
+                          {dayAppointments.length +
+                            dayEdd.length +
+                            dayCalendarEvents.length}
                         </span>
                       ) : null}
                     </div>

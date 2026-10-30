@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { GainChart } from "../components/GainChart";
 import { Counter } from "../components/Counter";
+import { ActionMenu } from "../components/ActionMenu";
 import {
   AlarmStatusBadge,
   ErrorBox,
@@ -344,69 +345,108 @@ export default function PatientPage() {
 
   return (
     <>
-      <div className="row between mb">
-        <div>
-          <Link className="muted small" to="/cabinet/patients">
-            ← Пациентки
-          </Link>
-          <h1 style={{ fontSize: 24, marginTop: 6 }}>{summary.fullName}</h1>
-          <div className="row">
-            <span className="badge mono">{summary.publicCode}</span>
-            <RiskBadge risk={summary.riskGroup} />
-            {summary.bound ? <span className="badge ok">Привязана</span> : <span className="badge neutral">Не привязана</span>}
-            {summary.status === "CLOSED" ? <span className="badge neutral">Закрыта</span> : null}
+      <div className="patient-sticky">
+        <div className="page-head row between mb patient-head">
+          <div>
+            <Link className="muted small" to="/cabinet/patients">
+              ← Пациентки
+            </Link>
+            <h1 style={{ fontSize: 24, marginTop: 6 }}>{summary.fullName}</h1>
+            <div className="row">
+              <span className="badge mono">{summary.publicCode}</span>
+              <RiskBadge risk={summary.riskGroup} />
+              {summary.bound ? (
+                <span className="badge ok">Привязана</span>
+              ) : (
+                <span className="badge neutral">Не привязана</span>
+              )}
+              {summary.status === "CLOSED" ? (
+                <span className="badge neutral">Закрыта</span>
+              ) : null}
+            </div>
+          </div>
+          <div className="row desktop-actions">
+            <button
+              className="btn"
+              onClick={() =>
+                navigate(
+                  `/cabinet/calendar?appointment=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+                )
+              }
+            >
+              Записать на приём
+            </button>
+            <button
+              className="btn"
+              onClick={() =>
+                navigate(
+                  `/cabinet/calendar?new=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+                )
+              }
+            >
+              Добавить событие
+            </button>
+            <button className="btn btn-primary" onClick={() => void createLink()}>
+              QR для привязки
+            </button>
+          </div>
+          <div className="mobile-actions row">
+            <button
+              className="btn btn-primary btn-sm"
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/cabinet/calendar?appointment=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+                )
+              }
+            >
+              Приём
+            </button>
+            <ActionMenu>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/cabinet/calendar?new=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
+                  )
+                }
+              >
+                Добавить событие
+              </button>
+              <button type="button" onClick={() => void createLink()}>
+                QR для привязки
+              </button>
+              <button type="button" onClick={() => setTab("settings")}>
+                Настройки
+              </button>
+            </ActionMenu>
           </div>
         </div>
-        <div className="row">
-          <button
-            className="btn"
-            onClick={() =>
-              navigate(
-                `/cabinet/calendar?appointment=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
-              )
-            }
-          >
-            Записать на приём
-          </button>
-          <button
-            className="btn"
-            onClick={() =>
-              navigate(
-                `/cabinet/calendar?new=1&patientId=${patientId}&date=${toIsoDate(new Date())}`
-              )
-            }
-          >
-            Добавить событие
-          </button>
-          <button className="btn btn-primary" onClick={() => void createLink()}>
-            QR для привязки
-          </button>
+
+        <div className="tabs">
+          {(
+            [
+              ["overview", "Обзор"],
+              ["diary", "Дневник"],
+              ["alerts", "События"],
+              ["messages", "Сообщения"],
+              ["settings", "Настройки"]
+            ] as [Tab, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              className={tab === key ? "active" : ""}
+              onClick={() => setTab(key)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       {notice ? <div className="alert ok">{notice}</div> : null}
       {actionError ? <ErrorBox message={actionError} /> : null}
-
-      <div className="tabs">
-        {(
-          [
-            ["overview", "Обзор"],
-            ["diary", "Дневник"],
-            ["alerts", "События"],
-            ["messages", "Сообщения"],
-            ["settings", "Настройки"]
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            className={tab === key ? "active" : ""}
-            onClick={() => setTab(key)}
-            type="button"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
       {tab === "overview" ? (
         <>

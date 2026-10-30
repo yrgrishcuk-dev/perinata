@@ -72,7 +72,7 @@ export default function AlertsPage() {
 
   return (
     <>
-      <div className="row between mb">
+      <div className="page-head row between mb">
         <h1 style={{ fontSize: 24 }}>События</h1>
         <button className="btn" onClick={() => void load()}>
           Обновить

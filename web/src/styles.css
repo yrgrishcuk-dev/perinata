@@ -60,6 +60,7 @@ textarea {
 
 .shell {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
 }
 
@@ -1536,4 +1537,543 @@ th {
   flex: 0 0 auto;
 }
 
+
+
+/* Mobile cabinet */
+.mobile-nav {
+  display: none;
+}
+
+.action-menu {
+  display: none;
+  position: relative;
+}
+
+.action-menu-toggle {
+  min-width: 40px;
+  padding-left: 10px;
+  padding-right: 10px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.action-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 45;
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.action-menu-list a,
+.action-menu-list button {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action-menu-list a:hover,
+.action-menu-list button:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.mobile-sheet-list {
+  display: grid;
+  gap: 4px;
+}
+
+.mobile-sheet-list a,
+.mobile-sheet-list button {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mobile-sheet-list button.danger {
+  color: var(--danger);
+}
+
+.patients-cards,
+.alerts-cards,
+.doctors-cards,
+.audit-cards {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .cabinet {
+    display: block;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .cabinet-main,
+  .cabinet-content {
+    min-width: 0;
+  }
+
+  .cabinet-header {
+    min-height: 54px;
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .cabinet-header > div:first-child {
+    min-width: 0;
+  }
+
+  .cabinet-header > div:first-child b {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cabinet-header > div:first-child .muted {
+    font-size: 11px;
+  }
+
+  .cabinet-header .header-email {
+    display: none;
+  }
+
+  .cabinet-header > .row {
+    display: none;
+  }
+
+  .cabinet-content {
+    padding: 12px 12px 24px;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    background: #fff;
+    border-top: 1px solid var(--line);
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav a,
+  .mobile-nav button {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 4px 2px;
+  }
+
+  .mobile-nav a.active {
+    color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  .action-menu {
+    display: block;
+  }
+
+  .desktop-actions {
+    display: none !important;
+  }
+
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .page-head h1 {
+    font-size: 22px !important;
+  }
+
+  .cabinet input,
+  .cabinet select,
+  .cabinet textarea {
+    font-size: 16px;
+  }
+
+  .cabinet .btn-sm {
+    min-height: 40px;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    justify-items: stretch;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 8px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .modal .row.mt:last-child {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding-top: 8px;
+    padding-bottom: 2px;
+  }
+
+  body:has(.modal-backdrop) {
+    overflow: hidden;
+  }
+
+  .qr-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .qr-box > div {
+    min-width: 0 !important;
+  }
+
+  .qr-box img {
+    max-width: 220px;
+    width: 100%;
+    height: auto;
+    align-self: center;
+  }
+
+  .patient-sticky {
+    position: sticky;
+    top: env(safe-area-inset-top);
+    z-index: 30;
+    background: var(--bg);
+    margin: 0 -12px;
+    padding: 4px 12px 0;
+  }
+
+  .patient-head {
+    padding-bottom: 4px;
+  }
+
+  .patient-head .desktop-actions {
+    display: none !important;
+  }
+
+  .patient-head .mobile-actions {
+    display: flex;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0;
+    padding: 4px 0 0;
+    min-height: 44px;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs button {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-side {
+    gap: 10px;
+  }
+
+  .calendar-rows {
+    max-height: none;
+  }
+
+  .help-toc {
+    max-height: calc(100dvh - 32px);
+  }
+}
+
+@media (max-width: 720px) {
+  .patients-table,
+  .dashboard-alerts-table,
+  .doctors-table,
+  .audit-table {
+    display: none;
+  }
+
+  .patients-cards,
+  .alerts-cards,
+  .doctors-cards,
+  .audit-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .patient-card,
+  .doctor-card,
+  .audit-card {
+    display: block;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .patient-card:active,
+  .doctor-card:active,
+  .audit-card:active {
+    background: #f8fafc;
+  }
+
+  .patient-card .row,
+  .doctor-card .row {
+    min-width: 0;
+  }
+
+  .patient-card-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .patient-card-meta b {
+    display: block;
+    font-size: 13px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    min-width: 0;
+  }
+
+  .calendar-scroll {
+    overflow: visible;
+  }
+
+  .calendar-events {
+    display: none;
+  }
+
+  .calendar-day {
+    min-height: 54px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .calendar-day-head {
+    font-size: 11px;
+  }
+
+  .calendar-day-dots {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: auto;
+  }
+
+  .day-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .day-dot.appointment {
+    background: var(--primary);
+  }
+
+  .day-dot.edd {
+    background: var(--danger);
+  }
+
+  .day-dot.event {
+    background: var(--ok);
+  }
+
+  .calendar-day-count {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .calendar-toolbar {
+    gap: 6px;
+  }
+
+  .calendar-toolbar h2 {
+    font-size: 15px;
+  }
+
+  .calendar-toolbar .btn-sm {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  .calendar-legend {
+    gap: 6px 10px;
+    font-size: 10px;
+  }
+
+  .calendar-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .page-head > .row,
+  .page-head > .mobile-actions {
+    width: 100%;
+  }
+
+  .page-head > .row .btn,
+  .page-head > .mobile-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+@media (min-width: 861px) {
+  .mobile-nav,
+  .mobile-sheet,
+  .mobile-actions {
+    display: none;
+  }
+}
+
+
+.calendar-day-dots {
+  display: none;
+}
+
+.mobile-actions {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mobile-actions {
+    display: flex;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .patient-card-meta span {
+    display: block;
+    font-size: 11px;
+  }
+
+  .alerts-cards .list-item,
+  .audit-card,
+  .doctor-card {
+    padding: 14px;
+  }
+}
+
+
+.mobile-label {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .desktop-label {
+    display: none;
+  }
+
+  .mobile-label {
+    display: inline;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .page-subtitle {
+    display: none;
+  }
+}
+
+
+
+@media (max-width: 860px) {
+  .patient-head > div:first-child > a {
+    display: none;
+  }
+
+  .patient-head h1 {
+    margin-top: 0 !important;
+    font-size: 20px !important;
+  }
+
+  .patient-head .badge {
+    padding: 2px 7px;
+    font-size: 10px;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .calendar-day-dots {
+    display: flex;
+  }
+}
 
