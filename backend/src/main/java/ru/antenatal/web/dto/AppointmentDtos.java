@@ -11,6 +11,7 @@ import ru.antenatal.domain.PatientResponse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 public final class AppointmentDtos {
 
@@ -45,6 +46,7 @@ public final class AppointmentDtos {
             String patientPublicCode,
             String doctorName,
             Instant startAt,
+            Instant endAt,
             LocalDate date,
             LocalTime time,
             LocalTime endTime,
@@ -54,7 +56,15 @@ public final class AppointmentDtos {
             String comment,
             AppointmentStatus status,
             PatientResponse patientResponse,
+            int sequence,
             String timezone
     ) {
     }
+
+    public record AppointmentAttentionView(
+            List<AppointmentView> today,
+            List<AppointmentView> pendingOutcome
+    ) {
+    }
 }
+

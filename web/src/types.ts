@@ -320,7 +320,7 @@ export interface CalendarEventInput {
 }
 
 export type AppointmentType = "VISIT" | "ULTRASOUND" | "TESTS" | "OTHER";
-export type AppointmentStatus = "SCHEDULED" | "CANCELLED";
+export type AppointmentStatus = "SCHEDULED" | "COMPLETED" | "NO_SHOW" | "CANCELLED";
 export type PatientResponse = "PENDING" | "CONFIRMED" | "DECLINED";
 
 export interface AppointmentView {
@@ -330,6 +330,7 @@ export interface AppointmentView {
   patientPublicCode: string | null;
   doctorName: string | null;
   startAt: string;
+  endAt: string;
   date: string;
   time: string;
   endTime: string;
@@ -339,6 +340,7 @@ export interface AppointmentView {
   comment: string | null;
   status: AppointmentStatus;
   patientResponse: PatientResponse;
+  sequence: number;
   timezone: string;
 }
 
@@ -353,3 +355,63 @@ export interface AppointmentCreateInput {
 }
 
 export type AppointmentUpdateInput = Omit<AppointmentCreateInput, "patientId">;
+
+export interface AppointmentAttentionView {
+  today: AppointmentView[];
+  pendingOutcome: AppointmentView[];
+}
+
+export interface CalendarFeedStatus {
+  active: boolean;
+  createdAt: string | null;
+}
+
+export interface CalendarFeedLink {
+  url: string;
+  webcalUrl: string;
+  createdAt: string;
+}
+
+export interface AnalyticsDailyPoint {
+  date: string;
+  total: number;
+  confirmed: number;
+  completed: number;
+  noShow: number;
+  cancelled: number;
+}
+
+export interface AnalyticsTypePoint {
+  type: AppointmentType;
+  total: number;
+  completed: number;
+  noShow: number;
+}
+
+export interface AnalyticsDoctorPoint {
+  doctorId: number;
+  fullName: string;
+  total: number;
+  completed: number;
+  noShow: number;
+  cancelled: number;
+}
+
+export interface AppointmentAnalytics {
+  from: string;
+  to: string;
+  days: number;
+  total: number;
+  confirmed: number;
+  declined: number;
+  completed: number;
+  noShow: number;
+  cancelled: number;
+  confirmationRate: number;
+  showRate: number;
+  noShowRate: number;
+  cancelRate: number;
+  daily: AnalyticsDailyPoint[];
+  byType: AnalyticsTypePoint[];
+  doctors: AnalyticsDoctorPoint[];
+}

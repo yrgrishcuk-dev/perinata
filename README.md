@@ -14,7 +14,7 @@
 - проходит анкету из 9 тревожных симптомов;
 - ведёт счётчик схваток и получает подсказку, когда ехать в роддом;
 - читает развитие плода и питание по неделям;
-- видит записи на приём, подтверждает участие, сообщает «не смогу прийти», получает напоминание за 24 часа и скачивает `.ics`;
+- видит записи на приём, подтверждает участие, сообщает «не смогу прийти», получает напоминание за 24 часа, скачивает `.ics` и может подписаться на приёмы через webcal;
 - переписывается с врачом внутри приложения.
 
 Врач:
@@ -25,6 +25,8 @@
 - настраивает пороги АД и глюкозы для конкретной пациентки;
 - ведёт календарь и личные события, в том числе с привязкой к пациентке;
 - записывает пациентку на приём, видит подтверждение или отказ, отменяет и переносит запись;
+- отмечает «Пришла» или «Не пришла» после приёма и видит ближайшие приёмы на обзоре;
+- видит аналитику приёмов и подписку на календарь;
 - видит календарь с окном ПДР ±1 день, цветами по сроку, риском и переходом в карточку;
 - работает с телефона: нижнее меню, компактный календарь и карточки вместо таблиц;
 - проходит встроенное обучение и чек-лист первых шагов;
@@ -229,6 +231,7 @@ curl "https://api.telegram.org/bot<TOKEN>/getChatMenuButton"
 - `GET /api/patient/invite/{token}`, `POST /api/patient/invite/{token}/confirm`;
 - `GET /api/patient/diary`, `POST /api/patient/diary`, `GET /api/patient/diary/today`;
 - `GET /api/patient/appointments`, `POST /api/patient/appointments/{id}/confirm|decline`;
+- `GET/POST/DELETE /api/patient/calendar/feed`;
 - `GET /api/patient/gain`;
 - `GET /api/patient/content/current`, `GET /api/patient/content/{week}`;
 - `POST /api/patient/symptoms`, `GET /api/patient/symptoms/history`;
@@ -246,7 +249,10 @@ curl "https://api.telegram.org/bot<TOKEN>/getChatMenuButton"
 - `PUT /api/doctor/patients/{id}/thresholds`;
 - `GET /api/doctor/alerts`, `POST /api/doctor/alerts/{id}/ack|close`;
 - `GET/POST /api/doctor/calendar/events`, `PUT/DELETE /api/doctor/calendar/events/{id}`;
-- `GET/POST /api/doctor/appointments`, `PUT /api/doctor/appointments/{id}`, `POST /api/doctor/appointments/{id}/cancel`;
+- `GET/POST /api/doctor/appointments`, `GET /api/doctor/appointments/attention`;
+- `PUT /api/doctor/appointments/{id}`, `POST /api/doctor/appointments/{id}/cancel|complete|no-show`;
+- `GET /api/doctor/analytics/appointments?days=7|30|90`;
+- `GET/POST/DELETE /api/doctor/calendar/feed`;
 - `POST /api/doctor/messenger-link`.
 
 Админ (Bearer):

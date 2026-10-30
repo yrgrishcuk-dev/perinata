@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AppointmentCard } from "../components/AppointmentCard";
+import { CalendarFeedPanel } from "../components/CalendarFeedPanel";
 import { ErrorBox, Spinner } from "../components/ui";
 import { request } from "../api";
 import { usePatient } from "../session";
@@ -87,6 +88,12 @@ export default function AppointmentsPage() {
       </div>
 
       {error ? <ErrorBox message={error} /> : null}
+
+      <CalendarFeedPanel
+        apiPath="/api/patient/calendar/feed"
+        token={token}
+        title="Подписка на приёмы"
+      />
 
       <div className="card">
         <h2>Предстоящие</h2>

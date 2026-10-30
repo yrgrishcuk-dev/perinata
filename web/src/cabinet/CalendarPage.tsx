@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
 import { ActionMenu } from "../components/ActionMenu";
+import { CalendarFeedPanel } from "../components/CalendarFeedPanel";
 import { request } from "../api";
 import {
+  appointmentStatusClass,
+  appointmentStatusLabel,
   appointmentTypeLabel,
   appointmentWhen,
   formatDate,
@@ -66,11 +69,6 @@ interface AppointmentDraft {
 }
 
 const APPOINTMENT_TYPES: AppointmentType[] = ["VISIT", "ULTRASOUND", "TESTS", "OTHER"];
-
-function timeToMinutes(value: string): number {
-  const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-}
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
@@ -286,24 +284,15 @@ export default function CalendarPage() {
     ? appointments.find((item) => item.id === appointmentDraft.id) ?? null
     : null;
 
-  const appointmentConflict = useMemo(() => {
-    if (!appointmentDraft?.date || !appointmentDraft.time) {
-      return null;
-    }
-    const start = timeToMinutes(appointmentDraft.time);
-    const end = start + Number(appointmentDraft.durationMinutes || "30");
-    return appointments.find((item) => {
-      if (item.id === appointmentDraft.id || item.status !== "SCHEDULED") {
-        return false;
-      }
-      if (item.date !== appointmentDraft.date) {
-        return false;
-      }
-      const otherStart = timeToMinutes(item.time);
-      const otherEnd = otherStart + item.durationMinutes;
-      return otherStart < end && otherEnd > start;
-    }) ?? null;
-  }, [appointmentDraft, appointments]);
+  const outcomeAvailable = Boolean(
+    currentAppointment &&
+      currentAppointment.status === "SCHEDULED" &&
+      new Date(currentAppointment.endAt).getTime() <= Date.now()
+  );
+  const appointmentLocked = Boolean(
+    currentAppointment &&
+      (currentAppointment.status !== "SCHEDULED" || outcomeAvailable)
+  );
 
   const patientOptions = useMemo(
     () => [...patients].sort((a, b) => a.fullName.localeCompare(b.fullName, "ru")),
@@ -522,6 +511,26 @@ export default function CalendarPage() {
       setAppointmentsReload((value) => value + 1);
     } catch (e) {
       setAppointmentFormError(e instanceof Error ? e.message : "Не удалось отменить приём");
+    } finally {
+      setSavingAppointment(false);
+    }
+  };
+
+  const markAppointment = async (outcome: "complete" | "no-show") => {
+    if (!token || !appointmentDraft?.id) {
+      return;
+    }
+    setSavingAppointment(true);
+    setAppointmentFormError(null);
+    try {
+      await request(`/api/doctor/appointments/${appointmentDraft.id}/${outcome}`, {
+        method: "POST",
+        token
+      });
+      setAppointmentDraft(null);
+      setAppointmentsReload((value) => value + 1);
+    } catch (e) {
+      setAppointmentFormError(e instanceof Error ? e.message : "Не удалось отметить приём");
     } finally {
       setSavingAppointment(false);
     }
@@ -807,14 +816,14 @@ export default function CalendarPage() {
                       </div>
                       <span
                         className={`badge ${
-                          appointment.status === "CANCELLED"
-                            ? "danger"
-                            : patientResponseClass(appointment.patientResponse)
+                          appointment.status === "SCHEDULED"
+                            ? patientResponseClass(appointment.patientResponse)
+                            : appointmentStatusClass(appointment.status)
                         }`}
                       >
-                        {appointment.status === "CANCELLED"
-                          ? "Отменён"
-                          : patientResponseLabel(appointment.patientResponse)}
+                        {appointment.status === "SCHEDULED"
+                          ? patientResponseLabel(appointment.patientResponse)
+                          : appointmentStatusLabel(appointment.status)}
                       </span>
                     </div>
                     <div className="row between mt">
@@ -921,6 +930,11 @@ export default function CalendarPage() {
               выходных.
             </p>
           </div>
+          <CalendarFeedPanel
+            apiPath="/api/doctor/calendar/feed"
+            token={token}
+            title="Подписка на календарь"
+          />
         </aside>
       </div>
 
@@ -1022,14 +1036,14 @@ export default function CalendarPage() {
               {currentAppointment ? (
                 <span
                   className={`badge ${
-                    currentAppointment.status === "CANCELLED"
-                      ? "danger"
-                      : patientResponseClass(currentAppointment.patientResponse)
+                    currentAppointment.status === "SCHEDULED"
+                      ? patientResponseClass(currentAppointment.patientResponse)
+                      : appointmentStatusClass(currentAppointment.status)
                   }`}
                 >
-                  {currentAppointment.status === "CANCELLED"
-                    ? "Отменён"
-                    : patientResponseLabel(currentAppointment.patientResponse)}
+                  {currentAppointment.status === "SCHEDULED"
+                    ? patientResponseLabel(currentAppointment.patientResponse)
+                    : appointmentStatusLabel(currentAppointment.status)}
                 </span>
               ) : null}
             </div>
@@ -1037,7 +1051,7 @@ export default function CalendarPage() {
             <Field label="Пациентка">
               <select
                 value={appointmentDraft.patientId}
-                disabled={Boolean(appointmentDraft.id)}
+                disabled={Boolean(appointmentDraft.id) || appointmentLocked}
                 onChange={(event) =>
                   setAppointmentDraft({ ...appointmentDraft, patientId: event.target.value })
                 }
@@ -1056,6 +1070,7 @@ export default function CalendarPage() {
                 <input
                   type="date"
                   value={appointmentDraft.date}
+                  disabled={appointmentLocked}
                   onChange={(event) =>
                     setAppointmentDraft({ ...appointmentDraft, date: event.target.value })
                   }
@@ -1065,6 +1080,7 @@ export default function CalendarPage() {
                 <input
                   type="time"
                   value={appointmentDraft.time}
+                  disabled={appointmentLocked}
                   onChange={(event) =>
                     setAppointmentDraft({ ...appointmentDraft, time: event.target.value })
                   }
@@ -1077,6 +1093,7 @@ export default function CalendarPage() {
                   max={240}
                   step={5}
                   value={appointmentDraft.durationMinutes}
+                  disabled={appointmentLocked}
                   onChange={(event) =>
                     setAppointmentDraft({
                       ...appointmentDraft,
@@ -1088,6 +1105,7 @@ export default function CalendarPage() {
               <Field label="Тип">
                 <select
                   value={appointmentDraft.type}
+                  disabled={appointmentLocked}
                   onChange={(event) =>
                     setAppointmentDraft({
                       ...appointmentDraft,
@@ -1107,6 +1125,7 @@ export default function CalendarPage() {
             <Field label="Место / кабинет">
               <input
                 value={appointmentDraft.place}
+                disabled={appointmentLocked}
                 onChange={(event) =>
                   setAppointmentDraft({ ...appointmentDraft, place: event.target.value })
                 }
@@ -1117,6 +1136,7 @@ export default function CalendarPage() {
             <Field label="Комментарий для пациентки">
               <textarea
                 value={appointmentDraft.comment}
+                disabled={appointmentLocked}
                 onChange={(event) =>
                   setAppointmentDraft({ ...appointmentDraft, comment: event.target.value })
                 }
@@ -1125,26 +1145,44 @@ export default function CalendarPage() {
               />
             </Field>
 
-            {appointmentConflict && currentAppointment?.status !== "CANCELLED" ? (
-              <p className="notice">
-                В это время уже есть приём:{" "}
-                {appointmentWhen(appointmentConflict.date, appointmentConflict.time)} ·{" "}
-                {appointmentConflict.patientName ?? "без пациентки"}. Можно сохранить, но
-                расписание пересекается.
-              </p>
-            ) : null}
             {appointmentFormError ? <ErrorBox message={appointmentFormError} /> : null}
 
+            {outcomeAvailable ? (
+              <p className="notice">Приём закончился. Отметьте результат.</p>
+            ) : null}
+
             <div className="row mt">
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={savingAppointment || currentAppointment?.status === "CANCELLED"}
-                onClick={() => void saveAppointment()}
-              >
-                {savingAppointment ? "Сохраняем…" : "Сохранить"}
-              </button>
-              {currentAppointment?.status === "SCHEDULED" ? (
+              {!appointmentLocked ? (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={savingAppointment}
+                  onClick={() => void saveAppointment()}
+                >
+                  {savingAppointment ? "Сохраняем…" : "Сохранить"}
+                </button>
+              ) : null}
+              {outcomeAvailable ? (
+                <>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    disabled={savingAppointment}
+                    onClick={() => void markAppointment("complete")}
+                  >
+                    Пришла
+                  </button>
+                  <button
+                    className="btn btn-soft-danger"
+                    type="button"
+                    disabled={savingAppointment}
+                    onClick={() => void markAppointment("no-show")}
+                  >
+                    Не пришла
+                  </button>
+                </>
+              ) : null}
+              {currentAppointment?.status === "SCHEDULED" && !outcomeAvailable ? (
                 <button
                   className="btn btn-soft-danger"
                   type="button"
@@ -1154,7 +1192,9 @@ export default function CalendarPage() {
                   Отменить приём
                 </button>
               ) : null}
-              {currentAppointment && currentAppointment.status !== "CANCELLED" ? (
+              {currentAppointment &&
+              currentAppointment.status !== "CANCELLED" &&
+              currentAppointment.status !== "NO_SHOW" ? (
                 <button
                   className="btn btn-ghost"
                   type="button"

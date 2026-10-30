@@ -15,13 +15,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.antenatal.domain.AlarmStatus;
+import ru.antenatal.domain.CalendarFeedOwnerType;
 import ru.antenatal.domain.Doctor;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.Platform;
 import ru.antenatal.security.CurrentPrincipal;
 import ru.antenatal.service.AlertService;
 import ru.antenatal.service.AppointmentService;
+import ru.antenatal.service.AppointmentAnalyticsService;
 import ru.antenatal.service.CalendarEventService;
+import ru.antenatal.service.CalendarFeedService;
 import ru.antenatal.service.DiaryService;
 import ru.antenatal.service.DoctorAccessService;
 import ru.antenatal.service.LinkService;
@@ -30,11 +33,15 @@ import ru.antenatal.service.PatientCardService;
 import ru.antenatal.service.SymptomService;
 import ru.antenatal.web.dto.CommonDtos.AlertView;
 import ru.antenatal.web.dto.CommonDtos.MessageView;
+import ru.antenatal.web.dto.AppointmentDtos.AppointmentAttentionView;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentCreateRequest;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentUpdateRequest;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentView;
+import ru.antenatal.web.dto.AnalyticsDtos.AppointmentAnalyticsView;
 import ru.antenatal.web.dto.CalendarDtos.CalendarEventRequest;
 import ru.antenatal.web.dto.CalendarDtos.CalendarEventView;
+import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedLink;
+import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedStatus;
 import ru.antenatal.web.dto.DoctorDtos.AlertActionRequest;
 import ru.antenatal.web.dto.DoctorDtos.CloseRequest;
 import ru.antenatal.web.dto.DoctorDtos.DashboardView;
@@ -70,6 +77,8 @@ public class DoctorController {
     private final ru.antenatal.service.ContractionService contractionService;
     private final CalendarEventService calendarEventService;
     private final AppointmentService appointmentService;
+    private final AppointmentAnalyticsService appointmentAnalyticsService;
+    private final CalendarFeedService calendarFeedService;
 
     @GetMapping("/dashboard")
     public DashboardView dashboard(@AuthenticationPrincipal CurrentPrincipal principal) {
@@ -281,6 +290,13 @@ public class DoctorController {
         return appointmentService.listForDoctor(doctor, from, to);
     }
 
+    @GetMapping("/appointments/attention")
+    public AppointmentAttentionView appointmentAttention(
+            @AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return appointmentService.attention(doctor);
+    }
+
     @PostMapping("/appointments")
     public AppointmentView createAppointment(
             @AuthenticationPrincipal CurrentPrincipal principal,
@@ -304,5 +320,50 @@ public class DoctorController {
             @PathVariable Long id) {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
         return appointmentService.cancel(doctor, id);
+    }
+
+    @PostMapping("/appointments/{id}/complete")
+    public AppointmentView completeAppointment(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @PathVariable Long id) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return appointmentService.complete(doctor, id);
+    }
+
+    @PostMapping("/appointments/{id}/no-show")
+    public AppointmentView noShowAppointment(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @PathVariable Long id) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return appointmentService.noShow(doctor, id);
+    }
+
+    @GetMapping("/analytics/appointments")
+    public AppointmentAnalyticsView appointmentAnalytics(
+            @AuthenticationPrincipal CurrentPrincipal principal,
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(required = false) Long doctorId) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return appointmentAnalyticsService.analytics(doctor, days, doctorId);
+    }
+
+    @GetMapping("/calendar/feed")
+    public CalendarFeedStatus calendarFeedStatus(
+            @AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return calendarFeedService.status(CalendarFeedOwnerType.DOCTOR, doctor.getId());
+    }
+
+    @PostMapping("/calendar/feed")
+    public CalendarFeedLink createCalendarFeed(
+            @AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return calendarFeedService.createOrRotate(CalendarFeedOwnerType.DOCTOR, doctor.getId());
+    }
+
+    @DeleteMapping("/calendar/feed")
+    public void revokeCalendarFeed(@AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        calendarFeedService.revoke(CalendarFeedOwnerType.DOCTOR, doctor.getId());
     }
 }
