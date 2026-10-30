@@ -2099,3 +2099,117 @@ th {
   font-size: 12px;
 }
 
+
+.calendar-feed-link {
+  display: grid;
+  gap: 8px;
+}
+
+.analytics-funnel {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-funnel-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.analytics-funnel-row b {
+  text-align: right;
+}
+
+.analytics-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.analytics-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.analytics-track.danger i {
+  background: var(--danger);
+}
+
+.analytics-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 180px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.analytics-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.analytics-bar-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  background: var(--primary-soft);
+}
+
+.analytics-segment {
+  display: block;
+  width: 100%;
+}
+
+.analytics-segment.completed {
+  background: var(--primary);
+}
+
+.analytics-segment.no-show {
+  background: var(--danger);
+}
+
+.analytics-types,
+.analytics-doctors {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-type-row {
+  display: grid;
+  gap: 4px;
+}
+
+.analytics-doctor-row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.analytics-doctor-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .analytics-funnel-row {
+    grid-template-columns: 92px minmax(0, 1fr) 40px;
+  }
+
+  .analytics-chart {
+    height: 140px;
+    gap: 1px;
+  }
+}
+

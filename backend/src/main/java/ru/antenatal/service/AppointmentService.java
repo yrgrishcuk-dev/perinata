@@ -17,6 +17,7 @@ import ru.antenatal.domain.Severity;
 import ru.antenatal.repo.AppointmentRepository;
 import ru.antenatal.repo.DoctorRepository;
 import ru.antenatal.repo.PatientCardRepository;
+import ru.antenatal.web.dto.AppointmentDtos.AppointmentAttentionView;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentCreateRequest;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentUpdateRequest;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentView;
@@ -141,8 +142,8 @@ public class AppointmentService {
     @Transactional
     public AppointmentView update(Doctor doctor, Long id, AppointmentUpdateRequest request) {
         Appointment appointment = requireOwned(doctor, id);
-        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw ApiException.badRequest("Приём отменён");
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw ApiException.badRequest("Приём уже завершён или отменён");
         }
         PatientCard patient = patientCardRepository.findById(appointment.getPatientCardId())
                 .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));
@@ -157,7 +158,7 @@ public class AppointmentService {
         appointment.setType(request.type() == null ? AppointmentType.VISIT : request.type());
         appointment.setPlace(normalize(request.place()));
         appointment.setComment(normalize(request.comment()));
-        appointment.setUpdatedAt(Instant.now());
+        touch(appointment);
 
         if (timeChanged) {
             appointment.setPatientResponse(PatientResponse.PENDING);
@@ -180,14 +181,90 @@ public class AppointmentService {
         Appointment appointment = requireOwned(doctor, id);
         PatientCard patient = patientCardRepository.findById(appointment.getPatientCardId())
                 .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));
-        if (appointment.getStatus() != AppointmentStatus.CANCELLED) {
-            appointment.setStatus(AppointmentStatus.CANCELLED);
-            appointment.setUpdatedAt(Instant.now());
-            appointmentRepository.save(appointment);
-            notifyCancelled(appointment, patient);
-            auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
-                    "APPOINTMENT_CANCEL", "APPOINTMENT", String.valueOf(id), null);
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            return view(appointment, patient, doctor);
         }
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw ApiException.badRequest("Состоявшийся приём нельзя отменить");
+        }
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        touch(appointment);
+        appointmentRepository.save(appointment);
+        notifyCancelled(appointment, patient);
+        auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
+                "APPOINTMENT_CANCEL", "APPOINTMENT", String.valueOf(id), null);
+        return view(appointment, patient, doctor);
+    }
+
+    @Transactional
+    public AppointmentView complete(Doctor doctor, Long id) {
+        return finish(doctor, id, AppointmentStatus.COMPLETED);
+    }
+
+    @Transactional
+    public AppointmentView noShow(Doctor doctor, Long id) {
+        return finish(doctor, id, AppointmentStatus.NO_SHOW);
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentAttentionView attention(Doctor doctor) {
+        ZoneId zone = zone();
+        LocalDate today = LocalDate.now(zone);
+        Instant from = today.atStartOfDay(zone).toInstant();
+        Instant to = today.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1);
+        List<Appointment> todayList = appointmentRepository
+                .findByDoctorIdAndStartAtBetweenOrderByStartAtAsc(doctor.getId(), from, to);
+        List<Appointment> pending = appointmentRepository
+                .findByDoctorIdAndStatusAndStartAtBeforeOrderByStartAtAsc(
+                        doctor.getId(), AppointmentStatus.SCHEDULED, Instant.now())
+                .stream()
+                .filter(appointment -> !appointment.endAt().isAfter(Instant.now()))
+                .limit(20)
+                .toList();
+        Map<Long, PatientCard> patients = patientCardRepository
+                .findAllById(todayList.stream()
+                        .map(Appointment::getPatientCardId)
+                        .collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(PatientCard::getId, Function.identity()));
+        Map<Long, PatientCard> pendingPatients = patientCardRepository
+                .findAllById(pending.stream()
+                        .map(Appointment::getPatientCardId)
+                        .collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(PatientCard::getId, Function.identity()));
+        return new AppointmentAttentionView(
+                todayList.stream()
+                        .map(appointment -> view(appointment,
+                                patients.get(appointment.getPatientCardId()), doctor))
+                        .toList(),
+                pending.stream()
+                        .map(appointment -> view(appointment,
+                                pendingPatients.get(appointment.getPatientCardId()), doctor))
+                        .toList());
+    }
+
+    private AppointmentView finish(Doctor doctor, Long id, AppointmentStatus target) {
+        Appointment appointment = requireOwned(doctor, id);
+        if (appointment.getStatus() == target) {
+            PatientCard patient = patientCardRepository.findById(appointment.getPatientCardId())
+                    .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));
+            return view(appointment, patient, doctor);
+        }
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw ApiException.badRequest("Приём уже завершён или отменён");
+        }
+        if (Instant.now().isBefore(appointment.endAt())) {
+            throw ApiException.badRequest("Приём ещё не закончился");
+        }
+        PatientCard patient = patientCardRepository.findById(appointment.getPatientCardId())
+                .orElseThrow(() -> ApiException.notFound("Карточка не найдена"));
+        appointment.setStatus(target);
+        touch(appointment);
+        appointmentRepository.save(appointment);
+        auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
+                target == AppointmentStatus.COMPLETED ? "APPOINTMENT_COMPLETE" : "APPOINTMENT_NO_SHOW",
+                "APPOINTMENT", String.valueOf(id), null);
         return view(appointment, patient, doctor);
     }
 
@@ -196,7 +273,7 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findByIdAndPatientCardId(id, card.getId())
                 .orElseThrow(() -> ApiException.notFound("Приём не найден"));
         if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
-            throw ApiException.badRequest("Приём отменён");
+            throw ApiException.badRequest("Приём уже завершён или отменён");
         }
         if (!appointment.getStartAt().isAfter(Instant.now())) {
             throw ApiException.badRequest("Приём уже прошёл");
@@ -206,7 +283,7 @@ public class AppointmentService {
         }
 
         appointment.setPatientResponse(response);
-        appointment.setUpdatedAt(Instant.now());
+        touch(appointment);
         appointmentRepository.save(appointment);
 
         String message = response == PatientResponse.CONFIRMED
@@ -229,6 +306,11 @@ public class AppointmentService {
     private Appointment requireOwned(Doctor doctor, Long id) {
         return appointmentRepository.findByIdAndDoctorId(id, doctor.getId())
                 .orElseThrow(() -> ApiException.notFound("Приём не найден"));
+    }
+
+    private void touch(Appointment appointment) {
+        appointment.setUpdatedAt(Instant.now());
+        appointment.setSequence(appointment.getSequence() + 1);
     }
 
     private Instant toInstant(LocalDate date, LocalTime time) {
@@ -296,6 +378,7 @@ public class AppointmentService {
                 patient == null ? null : patient.getPublicCode(),
                 doctor == null ? null : doctor.getFullName(),
                 appointment.getStartAt(),
+                appointment.endAt(),
                 zoned.toLocalDate(),
                 zoned.toLocalTime(),
                 zoned.toLocalTime().plusMinutes(appointment.getDurationMinutes()),
@@ -305,6 +388,7 @@ public class AppointmentService {
                 appointment.getComment(),
                 appointment.getStatus(),
                 appointment.getPatientResponse(),
+                appointment.getSequence(),
                 zone().getId());
     }
 }

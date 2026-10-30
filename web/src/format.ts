@@ -60,7 +60,29 @@ export function appointmentTypeLabel(type: AppointmentType): string {
 }
 
 export function appointmentStatusLabel(status: AppointmentStatus): string {
-  return status === "CANCELLED" ? "Отменён" : "Запланирован";
+  switch (status) {
+    case "COMPLETED":
+      return "Состоялся";
+    case "NO_SHOW":
+      return "Не пришёл";
+    case "CANCELLED":
+      return "Отменён";
+    default:
+      return "Запланирован";
+  }
+}
+
+export function appointmentStatusClass(status: AppointmentStatus): string {
+  switch (status) {
+    case "COMPLETED":
+      return "ok";
+    case "NO_SHOW":
+      return "danger";
+    case "CANCELLED":
+      return "neutral";
+    default:
+      return "neutral";
+  }
 }
 
 export function patientResponseLabel(response: PatientResponse): string {

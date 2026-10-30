@@ -15,6 +15,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByPatientCardIdOrderByStartAtDesc(Long patientCardId);
 
+    List<Appointment> findByPatientCardIdAndStartAtBetweenOrderByStartAtAsc(
+            Long patientCardId, Instant from, Instant to);
+
     Optional<Appointment> findByIdAndDoctorId(Long id, Long doctorId);
 
     Optional<Appointment> findByIdAndPatientCardId(Long id, Long patientCardId);
@@ -24,4 +27,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByStatusAndReminderSentAtIsNullAndStartAtBetweenOrderByStartAtAsc(
             AppointmentStatus status, Instant from, Instant to);
+
+    List<Appointment> findByDoctorIdAndStatusAndStartAtBeforeOrderByStartAtAsc(
+            Long doctorId, AppointmentStatus status, Instant before);
+
+    List<Appointment> findByDoctorIdInAndStartAtBetweenOrderByStartAtAsc(
+            List<Long> doctorIds, Instant from, Instant to);
 }

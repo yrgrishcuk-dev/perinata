@@ -1,4 +1,6 @@
 import {
+  appointmentStatusClass,
+  appointmentStatusLabel,
   appointmentTypeLabel,
   appointmentWhen,
   patientResponseClass,
@@ -23,6 +25,17 @@ export function AppointmentCard({
   const future = new Date(appointment.startAt).getTime() > Date.now();
   const active = appointment.status === "SCHEDULED" && future;
   const cancelled = appointment.status === "CANCELLED";
+  const finished = appointment.status === "COMPLETED" || appointment.status === "NO_SHOW";
+  const badgeClass = finished
+    ? appointmentStatusClass(appointment.status)
+    : cancelled
+      ? "danger"
+      : patientResponseClass(appointment.patientResponse);
+  const badgeLabel = finished
+    ? appointmentStatusLabel(appointment.status)
+    : cancelled
+      ? "Отменён"
+      : patientResponseLabel(appointment.patientResponse);
 
   return (
     <div className={`appointment-card${compact ? " compact" : ""}`}>
@@ -33,13 +46,7 @@ export function AppointmentCard({
             {appointmentWhen(appointment.date, appointment.time)}
           </b>
         </div>
-        <span
-          className={`badge ${
-            cancelled ? "danger" : patientResponseClass(appointment.patientResponse)
-          }`}
-        >
-          {cancelled ? "Отменён" : patientResponseLabel(appointment.patientResponse)}
-        </span>
+        <span className={`badge ${badgeClass}`}>{badgeLabel}</span>
       </div>
 
       {appointment.place ? <p className="muted small mt">Место: {appointment.place}</p> : null}
@@ -48,7 +55,7 @@ export function AppointmentCard({
         <p className="muted small">Врач: {appointment.doctorName}</p>
       ) : null}
 
-      {active || (!cancelled && future) ? (
+      {!finished && (active || (!cancelled && future)) ? (
         <div className="row appointment-actions">
           {onRespond ? (
             <>
@@ -70,7 +77,7 @@ export function AppointmentCard({
               </button>
             </>
           ) : null}
-          {!cancelled ? (
+          {!cancelled && appointment.status !== "NO_SHOW" ? (
             <button
               className="btn btn-ghost btn-sm"
               type="button"

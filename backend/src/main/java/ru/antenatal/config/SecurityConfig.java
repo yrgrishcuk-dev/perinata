@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 "/api/telegram/webhook/**",
                                 "/api/max/webhook/**",
                                 "/api/public/**",
+                                "/api/calendar/feed/**",
                                 "/api/dev/**",
                                 "/l/**",
                                 "/actuator/health/**",

@@ -3,15 +3,33 @@ import { Link } from "react-router-dom";
 import { AlarmStatusBadge, ErrorBox, RiskBadge, SeverityBadge, Spinner } from "../components/ui";
 import { GettingStartedCard } from "../components/GettingStartedCard";
 import { request } from "../api";
-import { alarmTypeLabel, formatDate, formatDateTime } from "../format";
+import {
+  alarmTypeLabel,
+  appointmentStatusClass,
+  appointmentStatusLabel,
+  appointmentTypeLabel,
+  appointmentWhen,
+  formatDate,
+  formatDateTime,
+  patientResponseClass,
+  patientResponseLabel
+} from "../format";
 import { useStaff } from "../session";
-import type { AlertView, DashboardView, PatientSummary } from "../types";
+import type {
+  AlertView,
+  AppointmentAttentionView,
+  DashboardView,
+  PatientSummary
+} from "../types";
 
 export default function DashboardPage() {
   const { token, me } = useStaff();
   const [dashboard, setDashboard] = useState<DashboardView | null>(null);
   const [alerts, setAlerts] = useState<AlertView[]>([]);
   const [patients, setPatients] = useState<PatientSummary[]>([]);
+  const [attention, setAttention] = useState<AppointmentAttentionView | null>(null);
+  const [outcomeBusy, setOutcomeBusy] = useState<number | null>(null);
+  const [outcomeError, setOutcomeError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,13 +41,15 @@ export default function DashboardPage() {
     Promise.all([
       request<DashboardView>("/api/doctor/dashboard", { token }),
       request<AlertView[]>("/api/doctor/alerts?status=NEW", { token }),
-      request<PatientSummary[]>("/api/doctor/patients", { token })
+      request<PatientSummary[]>("/api/doctor/patients", { token }),
+      request<AppointmentAttentionView>("/api/doctor/appointments/attention", { token })
     ])
-      .then(([dash, alertList, patientList]) => {
+      .then(([dash, alertList, patientList, attentionView]) => {
         if (!cancelled) {
           setDashboard(dash);
           setAlerts(alertList);
           setPatients(patientList);
+          setAttention(attentionView);
           setError(null);
         }
       })
@@ -57,6 +77,29 @@ export default function DashboardPage() {
 
   const highRisk = patients.filter((patient) => patient.riskGroup === "HIGH");
 
+  const markAppointment = async (id: number, outcome: "complete" | "no-show") => {
+    if (!token) {
+      return;
+    }
+    setOutcomeBusy(id);
+    setOutcomeError(null);
+    try {
+      await request(`/api/doctor/appointments/${id}/${outcome}`, {
+        method: "POST",
+        token
+      });
+      const updated = await request<AppointmentAttentionView>(
+        "/api/doctor/appointments/attention",
+        { token }
+      );
+      setAttention(updated);
+    } catch (e) {
+      setOutcomeError(e instanceof Error ? e.message : "Не удалось отметить приём");
+    } finally {
+      setOutcomeBusy(null);
+    }
+  };
+
   return (
     <>
       <div className="page-head row between mb">
@@ -83,6 +126,95 @@ export default function DashboardPage() {
           </b>
         </div>
       </div>
+
+      {attention ? (
+        <div className="card">
+          <div className="row between">
+            <h2>Сегодня</h2>
+            <Link className="btn btn-ghost btn-sm" to="/cabinet/calendar">
+              Календарь
+            </Link>
+          </div>
+          {attention.today.length === 0 ? (
+            <p className="muted mt">На сегодня приёмов нет.</p>
+          ) : (
+            <div className="calendar-event-list mt">
+              {attention.today.map((appointment) => (
+                <div className="calendar-event-row" key={appointment.id}>
+                  <div className="row between">
+                    <div>
+                      <b className="calendar-event-title">
+                        {appointment.time.slice(0, 5)} · {appointmentTypeLabel(appointment.type)}
+                      </b>
+                      <div className="muted small">
+                        {appointment.patientId ? (
+                          <Link to={`/cabinet/patients/${appointment.patientId}`}>
+                            {appointment.patientName ?? "Пациентка"}
+                          </Link>
+                        ) : (
+                          "Без пациентки"
+                        )}
+                        {appointment.place ? ` · ${appointment.place}` : ""}
+                      </div>
+                    </div>
+                    <span
+                      className={`badge ${
+                        appointment.status === "SCHEDULED"
+                          ? patientResponseClass(appointment.patientResponse)
+                          : appointmentStatusClass(appointment.status)
+                      }`}
+                    >
+                      {appointment.status === "SCHEDULED"
+                        ? patientResponseLabel(appointment.patientResponse)
+                        : appointmentStatusLabel(appointment.status)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {attention.pendingOutcome.length > 0 ? (
+            <div className="mt">
+              <h3 style={{ fontSize: 14 }}>Требуют отметки</h3>
+              {outcomeError ? <ErrorBox message={outcomeError} /> : null}
+              <div className="calendar-event-list mt">
+                {attention.pendingOutcome.map((appointment) => (
+                  <div className="calendar-event-row" key={appointment.id}>
+                    <div className="row between">
+                      <div>
+                        <b>{appointmentWhen(appointment.date, appointment.time)}</b>
+                        <div className="muted small">
+                          {appointment.patientName ?? "Пациентка"} ·{" "}
+                          {appointmentTypeLabel(appointment.type)}
+                        </div>
+                      </div>
+                      <div className="row">
+                        <button
+                          className="btn btn-primary btn-sm"
+                          type="button"
+                          disabled={outcomeBusy === appointment.id}
+                          onClick={() => void markAppointment(appointment.id, "complete")}
+                        >
+                          Пришла
+                        </button>
+                        <button
+                          className="btn btn-soft-danger btn-sm"
+                          type="button"
+                          disabled={outcomeBusy === appointment.id}
+                          onClick={() => void markAppointment(appointment.id, "no-show")}
+                        >
+                          Не пришла
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <GettingStartedCard doctorId={me?.id ?? 0} patientsCount={patients.length} />
 

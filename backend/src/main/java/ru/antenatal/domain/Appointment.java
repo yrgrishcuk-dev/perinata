@@ -51,8 +51,15 @@ public class Appointment extends BaseEntity {
     private Instant reminderSentAt;
 
     @Column(nullable = false)
+    private int sequence = 0;
+
+    @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    public Instant endAt() {
+        return startAt.plusSeconds(durationMinutes * 60L);
+    }
 }

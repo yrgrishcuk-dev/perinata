@@ -36,6 +36,7 @@ export function downloadAppointmentIcs(appointment: AppointmentView): void {
     `DTSTAMP:${utc(new Date())}`,
     `DTSTART:${utc(start)}`,
     `DTEND:${utc(end)}`,
+    `SEQUENCE:${appointment.sequence}`,
     `SUMMARY:${escapeIcs(summary)}`,
     appointment.place ? `LOCATION:${escapeIcs(appointment.place)}` : null,
     description ? `DESCRIPTION:${escapeIcs(description)}` : null,

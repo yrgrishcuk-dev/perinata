@@ -65,6 +65,9 @@ export default function CabinetLayout() {
         <NavLink to="/cabinet/alerts" className={({ isActive }) => (isActive ? "active" : "")}>
           События
         </NavLink>
+        <NavLink to="/cabinet/analytics" className={({ isActive }) => (isActive ? "active" : "")}>
+          Аналитика
+        </NavLink>
         <NavLink to="/cabinet/help" className={({ isActive }) => (isActive ? "active" : "")}>
           Обучение
         </NavLink>
@@ -151,6 +154,9 @@ export default function CabinetLayout() {
           <div className="modal mobile-sheet" onClick={(event) => event.stopPropagation()}>
             <h2>Ещё</h2>
             <div className="mobile-sheet-list mt">
+              <Link to="/cabinet/analytics" onClick={() => setMoreOpen(false)}>
+                Аналитика
+              </Link>
               <Link to="/cabinet/help" onClick={() => setMoreOpen(false)}>
                 Обучение
               </Link>

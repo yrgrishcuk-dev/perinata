@@ -19,6 +19,7 @@ import DashboardPage from "./cabinet/DashboardPage";
 import PatientsPage from "./cabinet/PatientsPage";
 import PatientPage from "./cabinet/PatientPage";
 import AlertsPage from "./cabinet/AlertsPage";
+import AnalyticsPage from "./cabinet/AnalyticsPage";
 import CalendarPage from "./cabinet/CalendarPage";
 import HelpPage from "./cabinet/HelpPage";
 import AdminPage from "./cabinet/AdminPage";
@@ -130,6 +131,7 @@ export default function App() {
         <Route path="patients/:id" element={<PatientPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="alerts" element={<AlertsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="help" element={<HelpPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="audit" element={<AuditPage />} />

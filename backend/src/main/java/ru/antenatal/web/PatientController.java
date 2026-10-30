@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.antenatal.domain.Doctor;
+import ru.antenatal.domain.CalendarFeedOwnerType;
 import ru.antenatal.domain.PatientAccount;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.PatientStatus;
@@ -23,6 +25,7 @@ import ru.antenatal.repo.PatientCardRepository;
 import ru.antenatal.security.CurrentPrincipal;
 import ru.antenatal.service.AlertService;
 import ru.antenatal.service.AppointmentService;
+import ru.antenatal.service.CalendarFeedService;
 import ru.antenatal.service.ContentService;
 import ru.antenatal.service.ContractionService;
 import ru.antenatal.service.DiaryService;
@@ -36,6 +39,8 @@ import ru.antenatal.web.dto.CommonDtos.AlertView;
 import ru.antenatal.web.dto.CommonDtos.GainView;
 import ru.antenatal.web.dto.CommonDtos.WeekContentView;
 import ru.antenatal.web.dto.AppointmentDtos.AppointmentView;
+import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedLink;
+import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedStatus;
 import ru.antenatal.web.dto.PatientDtos.ContentBundle;
 import ru.antenatal.web.dto.PatientDtos.ContractionAddRequest;
 import ru.antenatal.web.dto.PatientDtos.ContractionStateResponse;
@@ -77,6 +82,7 @@ public class PatientController {
     private final MessageService messageService;
     private final LinkService linkService;
     private final AppointmentService appointmentService;
+    private final CalendarFeedService calendarFeedService;
     private final ru.antenatal.service.AuditService auditService;
 
     @GetMapping("/me")
@@ -241,6 +247,26 @@ public class PatientController {
                                               @PathVariable Long id) {
         return appointmentService.respond(patientAccessService.requireCard(principal),
                 id, PatientResponse.DECLINED);
+    }
+
+    @GetMapping("/calendar/feed")
+    public CalendarFeedStatus calendarFeedStatus(
+            @AuthenticationPrincipal CurrentPrincipal principal) {
+        PatientCard card = patientAccessService.requireCard(principal);
+        return calendarFeedService.status(CalendarFeedOwnerType.PATIENT, card.getId());
+    }
+
+    @PostMapping("/calendar/feed")
+    public CalendarFeedLink createCalendarFeed(
+            @AuthenticationPrincipal CurrentPrincipal principal) {
+        PatientCard card = patientAccessService.requireCard(principal);
+        return calendarFeedService.createOrRotate(CalendarFeedOwnerType.PATIENT, card.getId());
+    }
+
+    @DeleteMapping("/calendar/feed")
+    public void revokeCalendarFeed(@AuthenticationPrincipal CurrentPrincipal principal) {
+        PatientCard card = patientAccessService.requireCard(principal);
+        calendarFeedService.revoke(CalendarFeedOwnerType.PATIENT, card.getId());
     }
 
     @PostMapping("/consent/revoke")
