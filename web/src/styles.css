@@ -1793,12 +1793,13 @@ th {
   }
 
   .patient-sticky {
+    position: -webkit-sticky;
     position: sticky;
-    top: env(safe-area-inset-top);
+    top: 0;
     z-index: 30;
     background: var(--bg);
     margin: 0 -12px;
-    padding: 4px 12px 0;
+    padding: calc(4px + env(safe-area-inset-top)) 12px 0;
   }
 
   .patient-head {

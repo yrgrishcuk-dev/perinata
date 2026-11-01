@@ -549,6 +549,16 @@ export default function PatientPage() {
             <div className="stat">
               <span className="muted small">ПДР</span>
               <b style={{ fontSize: 18 }}>{formatDate(summary.edd)}</b>
+              <button className="btn btn-sm mt" type="button" onClick={openEdd}>
+                Рассчитать
+              </button>
+              <span className="notice">
+                {details.eddMethod === "LMP" && details.eddBasisDate
+                  ? `По менструации от ${formatDate(details.eddBasisDate)}, цикл ${
+                      details.eddCycleLength ?? 28
+                    } дн.`
+                  : "Указан вручную"}
+              </span>
             </div>
             <div className="stat">
               <span className="muted small">ИМТ до беременности</span>
