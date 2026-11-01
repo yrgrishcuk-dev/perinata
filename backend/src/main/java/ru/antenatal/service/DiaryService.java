@@ -3,13 +3,18 @@ package ru.antenatal.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.antenatal.calc.GainCalculator;
 import ru.antenatal.calc.VitalsEvaluator;
 import ru.antenatal.common.ApiException;
 import ru.antenatal.config.AppProperties;
+import ru.antenatal.domain.AbdominalPain;
 import ru.antenatal.domain.AlarmEvent;
 import ru.antenatal.domain.AlarmType;
 import ru.antenatal.domain.DiabetesType;
 import ru.antenatal.domain.DiaryEntry;
+import ru.antenatal.domain.DischargeCharacter;
+import ru.antenatal.domain.FetalMovements;
+import ru.antenatal.domain.LegEdema;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.Severity;
 import ru.antenatal.repo.DiaryEntryRepository;
@@ -64,6 +69,23 @@ public class DiaryService {
         entry.setGlucoseMmol(request.glucoseMmol());
         entry.setGlucoseContext(request.glucoseContext());
         entry.setNote(request.note());
+        entry.setDischargeCharacter(request.dischargeCharacter());
+        if (request.dischargeCharacter() == null
+                || request.dischargeCharacter() == DischargeCharacter.NONE) {
+            entry.setDischargeAmount(null);
+            entry.setDischargeOdor(null);
+        } else {
+            entry.setDischargeAmount(request.dischargeAmount());
+            entry.setDischargeOdor(request.dischargeOdor());
+        }
+        entry.setVaginalPh(request.vaginalPh());
+        entry.setFetalMovements(request.fetalMovements());
+        entry.setLowerAbdominalPain(request.lowerAbdominalPain());
+        entry.setPainIntensity(request.lowerAbdominalPain() == null
+                || request.lowerAbdominalPain() == AbdominalPain.NONE
+                ? null
+                : request.painIntensity());
+        entry.setLegEdema(request.legEdema());
         entry.setUpdatedAt(Instant.now());
         diaryEntryRepository.save(entry);
 
@@ -106,6 +128,16 @@ public class DiaryService {
         if (weightAlarm != null && topAlarm == null) {
             topAlarm = weightAlarm;
             topMessage = "Прибавка веса выше коридора. Сообщите врачу и проверьте рацион.";
+        }
+
+        for (ObservationAlert observation : evaluateObservations(card, request, date)) {
+            AlarmEvent alarm = alertService.raise(card, observation.type(), observation.severity(),
+                    observation.payload(), Duration.ofHours(23));
+            if (topSeverity == null || severityRank(observation.severity()) > severityRank(topSeverity)) {
+                topAlarm = alarm;
+                topMessage = observation.message();
+                topSeverity = observation.severity();
+            }
         }
 
         auditService.log("PATIENT", String.valueOf(card.getId()),
@@ -171,6 +203,82 @@ public class DiaryService {
                 payload, Duration.ofHours(23));
     }
 
+    private List<ObservationAlert> evaluateObservations(PatientCard card,
+                                                        DiarySaveRequest request,
+                                                        LocalDate date) {
+        java.util.List<ObservationAlert> alerts = new java.util.ArrayList<>();
+
+        if (request.dischargeCharacter() == DischargeCharacter.BLOODY) {
+            alerts.add(new ObservationAlert(AlarmType.DISCHARGE, Severity.CRITICAL,
+                    "Кровянистые выделения. Свяжитесь с врачом или позвоните 103/112.",
+                    Map.of("discharge", "BLOODY")));
+        } else if (request.dischargeCharacter() == DischargeCharacter.WATERY) {
+            alerts.add(new ObservationAlert(AlarmType.DISCHARGE, Severity.CRITICAL,
+                    "Водянистые выделения. Возможно подтекание вод — свяжитесь с врачом.",
+                    Map.of("discharge", "WATERY")));
+        } else if (Boolean.TRUE.equals(request.dischargeOdor())) {
+            alerts.add(new ObservationAlert(AlarmType.DISCHARGE, Severity.WARNING,
+                    "Выделения с запахом. Обсудите это с врачом.",
+                    Map.of("odor", true)));
+        }
+
+        if (request.vaginalPh() != null
+                && request.vaginalPh().compareTo(BigDecimal.valueOf(5.0)) > 0) {
+            alerts.add(new ObservationAlert(AlarmType.VAGINAL_PH, Severity.WARNING,
+                    "pH влагалища выше 5.0. Обсудите результат с врачом.",
+                    Map.of("ph", request.vaginalPh())));
+        }
+
+        int week = GainCalculator.gestationalAge(card.getEdd(), date).weeks();
+        if (week >= 28 && request.fetalMovements() == FetalMovements.NONE) {
+            alerts.add(new ObservationAlert(AlarmType.FETAL_MOVEMENTS, Severity.CRITICAL,
+                    "Нет шевелений плода. Свяжитесь с врачом или позвоните 103/112.",
+                    Map.of("movements", "NONE", "week", week)));
+        } else if (week >= 28 && request.fetalMovements() == FetalMovements.LESS) {
+            alerts.add(new ObservationAlert(AlarmType.FETAL_MOVEMENTS, Severity.WARNING,
+                    "Шевеления плода меньше обычного. Обсудите это с врачом.",
+                    Map.of("movements", "LESS", "week", week)));
+        }
+
+        if (request.lowerAbdominalPain() == AbdominalPain.CRAMPING) {
+            alerts.add(new ObservationAlert(AlarmType.ABDOMINAL_PAIN, Severity.WARNING,
+                    "Схваткообразные боли внизу живота. Обсудите это с врачом.",
+                    Map.of("pain", "CRAMPING")));
+        } else if (request.painIntensity() != null && request.painIntensity() >= 9) {
+            alerts.add(new ObservationAlert(AlarmType.ABDOMINAL_PAIN, Severity.CRITICAL,
+                    "Сильная боль внизу живота. Свяжитесь с врачом или позвоните 103/112.",
+                    Map.of("pain", request.painIntensity())));
+        } else if (request.painIntensity() != null && request.painIntensity() >= 7) {
+            alerts.add(new ObservationAlert(AlarmType.ABDOMINAL_PAIN, Severity.WARNING,
+                    "Выраженная боль внизу живота. Обсудите это с врачом.",
+                    Map.of("pain", request.painIntensity())));
+        }
+
+        if (request.legEdema() == LegEdema.ASYMMETRIC) {
+            alerts.add(new ObservationAlert(AlarmType.EDEMA, Severity.CRITICAL,
+                    "Асимметричные отёки ног. Свяжитесь с врачом.",
+                    Map.of("edema", "ASYMMETRIC")));
+        } else if (request.legEdema() == LegEdema.PRONOUNCED) {
+            alerts.add(new ObservationAlert(AlarmType.EDEMA, Severity.WARNING,
+                    "Выраженные отёки ног. Обсудите это с врачом.",
+                    Map.of("edema", "PRONOUNCED")));
+        }
+
+        return alerts;
+    }
+
+    private int severityRank(Severity severity) {
+        return switch (severity) {
+            case CRITICAL -> 3;
+            case WARNING -> 2;
+            default -> 1;
+        };
+    }
+
+    private record ObservationAlert(AlarmType type, Severity severity,
+                                    String message, Map<String, Object> payload) {
+    }
+
     public DiaryView view(DiaryEntry entry) {
         return new DiaryView(
                 entry.getId(),
@@ -182,6 +290,14 @@ public class DiaryService {
                 entry.getGlucoseMmol(),
                 entry.getGlucoseContext(),
                 entry.getNote(),
+                entry.getDischargeCharacter(),
+                entry.getDischargeAmount(),
+                entry.getDischargeOdor(),
+                entry.getVaginalPh(),
+                entry.getFetalMovements(),
+                entry.getLowerAbdominalPain(),
+                entry.getPainIntensity(),
+                entry.getLegEdema(),
                 entry.getUpdatedAt());
     }
 
@@ -217,6 +333,20 @@ public class DiaryService {
             if (request.glucoseContext() == null) {
                 throw ApiException.badRequest("Укажите контекст измерения глюкозы");
             }
+        }
+        if (request.vaginalPh() != null
+                && (request.vaginalPh().compareTo(BigDecimal.valueOf(3.0)) < 0
+                || request.vaginalPh().compareTo(BigDecimal.valueOf(7.0)) > 0)) {
+            throw ApiException.badRequest("pH влагалища вне диапазона");
+        }
+        if (request.painIntensity() != null
+                && (request.painIntensity() < 0 || request.painIntensity() > 10)) {
+            throw ApiException.badRequest("Интенсивность боли вне диапазона");
+        }
+        if (request.lowerAbdominalPain() != null
+                && request.lowerAbdominalPain() != AbdominalPain.NONE
+                && request.painIntensity() == null) {
+            throw ApiException.badRequest("Укажите интенсивность боли");
         }
     }
 }

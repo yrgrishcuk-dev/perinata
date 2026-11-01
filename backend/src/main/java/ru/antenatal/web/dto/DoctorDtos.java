@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import ru.antenatal.domain.BmiCategory;
 import ru.antenatal.domain.DiabetesType;
+import ru.antenatal.domain.EddMethod;
 import ru.antenatal.domain.PatientStatus;
 import ru.antenatal.domain.RiskGroup;
 
@@ -89,7 +90,11 @@ public final class DoctorDtos {
             BigDecimal heightCm,
             BigDecimal prePregnancyWeightKg,
             java.time.LocalTime reminderTime,
-            String comment
+            String comment,
+            EddMethod eddMethod,
+            LocalDate eddBasisDate,
+            Integer eddCycleLength,
+            Instant eddCalculatedAt
     ) {
     }
 

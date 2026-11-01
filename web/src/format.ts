@@ -1,8 +1,14 @@
 import type {
+  AbdominalPain,
   AlarmType,
   AppointmentStatus,
   AppointmentType,
   BmiCategory,
+  DiaryView,
+  DischargeAmount,
+  DischargeCharacter,
+  FetalMovements,
+  LegEdema,
   PatientResponse,
   Severity
 } from "./types";
@@ -170,6 +176,16 @@ export function alarmTypeLabel(type: AlarmType): string {
       return "РћС‚РѕС€Р»Рё РІРѕРґС‹";
     case "APPOINTMENT_RESPONSE":
       return "РћС‚РІРµС‚ РЅР° РїСЂРёС‘Рј";
+    case "DISCHARGE":
+      return "Р’С‹РґРµР»РµРЅРёСЏ";
+    case "VAGINAL_PH":
+      return "pH РІР»Р°РіР°Р»РёС‰Р°";
+    case "FETAL_MOVEMENTS":
+      return "РЁРµРІРµР»РµРЅРёСЏ РїР»РѕРґР°";
+    case "ABDOMINAL_PAIN":
+      return "Р‘РѕР»СЊ РІРЅРёР·Сѓ Р¶РёРІРѕС‚Р°";
+    case "EDEMA":
+      return "РћС‚С‘РєРё РЅРѕРі";
     default:
       return type;
   }
@@ -222,4 +238,95 @@ export function formatSeconds(value?: number | null): string {
     return `${seconds} СЃ`;
   }
   return `${minutes} РјРёРЅ ${String(seconds).padStart(2, "0")} СЃ`;
+}
+
+export function dischargeCharacterLabel(value: DischargeCharacter): string {
+  switch (value) {
+    case "NONE":
+      return "Нет";
+    case "NORMAL":
+      return "Обычные";
+    case "MUCOUS":
+      return "Слизистые";
+    case "WATERY":
+      return "Водянистые";
+    case "BLOODY":
+      return "Кровянистые";
+    default:
+      return value;
+  }
+}
+
+export function dischargeAmountLabel(value: DischargeAmount): string {
+  return value === "ABUNDANT" ? "Обильно" : "Обычно";
+}
+
+export function fetalMovementsLabel(value: FetalMovements): string {
+  switch (value) {
+    case "NORMAL":
+      return "Обычные";
+    case "LESS":
+      return "Меньше обычного";
+    case "NONE":
+      return "Нет";
+    default:
+      return "Не отслеживала";
+  }
+}
+
+export function abdominalPainLabel(value: AbdominalPain): string {
+  switch (value) {
+    case "NONE":
+      return "Нет";
+    case "PULLING":
+      return "Тянущие";
+    case "CRAMPING":
+      return "Схваткообразные";
+    case "SHARP":
+      return "Острые";
+    default:
+      return "Другое";
+  }
+}
+
+export function legEdemaLabel(value: LegEdema): string {
+  switch (value) {
+    case "NONE":
+      return "Нет";
+    case "MILD":
+      return "Небольшие";
+    case "PRONOUNCED":
+      return "Выраженные";
+    default:
+      return "Асимметричные";
+  }
+}
+
+export function diaryObservationsSummary(entry: DiaryView): string {
+  const parts: string[] = [];
+  if (entry.dischargeCharacter) {
+    let discharge = dischargeCharacterLabel(entry.dischargeCharacter);
+    if (entry.dischargeAmount) {
+      discharge += `, ${dischargeAmountLabel(entry.dischargeAmount).toLowerCase()}`;
+    }
+    if (entry.dischargeOdor) {
+      discharge += ", запах";
+    }
+    parts.push(`Выделения: ${discharge}`);
+  }
+  if (entry.vaginalPh != null) {
+    parts.push(`pH: ${entry.vaginalPh}`);
+  }
+  if (entry.fetalMovements) {
+    parts.push(`Шевеления: ${fetalMovementsLabel(entry.fetalMovements).toLowerCase()}`);
+  }
+  if (entry.lowerAbdominalPain) {
+    const pain = abdominalPainLabel(entry.lowerAbdominalPain);
+    const intensity = entry.painIntensity != null ? ` ${entry.painIntensity}/10` : "";
+    parts.push(`Боль: ${pain}${intensity}`);
+  }
+  if (entry.legEdema) {
+    parts.push(`Отёки: ${legEdemaLabel(entry.legEdema).toLowerCase()}`);
+  }
+  return parts.join(" · ");
 }

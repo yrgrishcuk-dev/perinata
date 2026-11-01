@@ -15,6 +15,7 @@ import {
 import { request } from "../api";
 import {
   alarmTypeLabel,
+  diaryObservationsSummary,
   formatDate,
   formatDateTime,
   formatPayload,
@@ -27,6 +28,7 @@ import type {
   AlertView,
   DiabetesType,
   DiaryView,
+  EddPreview,
   LinkResponse,
   MessagesResponse,
   PatientDetails,
@@ -99,6 +101,12 @@ export default function PatientPage() {
   const [link, setLink] = useState<LinkResponse | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [eddOpen, setEddOpen] = useState(false);
+  const [eddLmp, setEddLmp] = useState("");
+  const [eddCycle, setEddCycle] = useState("28");
+  const [eddPreview, setEddPreview] = useState<EddPreview | null>(null);
+  const [eddBusy, setEddBusy] = useState(false);
+  const [eddError, setEddError] = useState<string | null>(null);
 
   const loadDetails = useCallback(async () => {
     if (!token || !Number.isFinite(patientId)) {
@@ -310,6 +318,65 @@ export default function PatientPage() {
       setActionError(e instanceof Error ? e.message : "Не удалось сохранить");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const openEdd = () => {
+    setEddError(null);
+    setEddPreview(null);
+    setEddLmp(details?.eddBasisDate ?? "");
+    setEddCycle(details?.eddCycleLength != null ? String(details.eddCycleLength) : "28");
+    setEddOpen(true);
+  };
+
+  const previewEdd = async () => {
+    if (!token || !eddLmp) {
+      setEddError("Укажите дату последней менструации");
+      return;
+    }
+    setEddBusy(true);
+    setEddError(null);
+    try {
+      const data = await request<EddPreview>(
+        `/api/doctor/patients/${patientId}/edd/preview`,
+        {
+          method: "POST",
+          body: { lmpDate: eddLmp, cycleLength: Number(eddCycle) },
+          token
+        }
+      );
+      setEddPreview(data);
+    } catch (e) {
+      setEddError(e instanceof Error ? e.message : "Не удалось рассчитать ПДР");
+    } finally {
+      setEddBusy(false);
+    }
+  };
+
+  const applyEdd = async () => {
+    if (!token || !eddLmp) {
+      setEddError("Укажите дату последней менструации");
+      return;
+    }
+    setEddBusy(true);
+    setEddError(null);
+    try {
+      const data = await request<PatientDetails>(
+        `/api/doctor/patients/${patientId}/edd/apply`,
+        {
+          method: "POST",
+          body: { lmpDate: eddLmp, cycleLength: Number(eddCycle) },
+          token
+        }
+      );
+      setDetails(data);
+      setSettings((current) => (current ? { ...current, edd: data.summary.edd } : current));
+      setEddOpen(false);
+      setNotice("ПДР обновлён");
+    } catch (e) {
+      setEddError(e instanceof Error ? e.message : "Не удалось применить ПДР");
+    } finally {
+      setEddBusy(false);
     }
   };
 
@@ -566,6 +633,7 @@ export default function PatientPage() {
                     <th>Пульс</th>
                     <th>Вес</th>
                     <th>Глюкоза</th>
+                    <th>Наблюдения</th>
                     <th>Заметка</th>
                   </tr>
                 </thead>
@@ -586,6 +654,7 @@ export default function PatientPage() {
                               }`
                             : "—"}
                         </td>
+                        <td>{diaryObservationsSummary(entry) || "—"}</td>
                         <td>{entry.note ?? "—"}</td>
                       </tr>
                     ))}
@@ -707,6 +776,20 @@ export default function PatientPage() {
                   value={settings.edd}
                   onChange={(event) => setSettings({ ...settings, edd: event.target.value })}
                 />
+                <button
+                  className="btn btn-sm mt"
+                  type="button"
+                  onClick={openEdd}
+                >
+                  Рассчитать по менструации
+                </button>
+                <span className="notice">
+                  {details.eddMethod === "LMP" && details.eddBasisDate
+                    ? `По менструации от ${formatDate(details.eddBasisDate)}, цикл ${
+                        details.eddCycleLength ?? 28
+                      } дн.`
+                    : "ПДР указан вручную"}
+                </span>
               </Field>
               <Field label="Напоминание о дневнике">
                 <input
@@ -852,6 +935,68 @@ export default function PatientPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eddOpen ? (
+        <div className="modal-backdrop" onClick={() => setEddOpen(false)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h2>Расчёт ПДР</h2>
+            <p className="muted mt">По первому дню последней менструации.</p>
+            <div className="grid two">
+              <Field label="Первый день последней менструации">
+                <input
+                  type="date"
+                  value={eddLmp}
+                  onChange={(event) => {
+                    setEddLmp(event.target.value);
+                    setEddPreview(null);
+                  }}
+                />
+              </Field>
+              <Field label="Длина цикла, дней">
+                <input
+                  type="number"
+                  min={21}
+                  max={35}
+                  value={eddCycle}
+                  onChange={(event) => {
+                    setEddCycle(event.target.value);
+                    setEddPreview(null);
+                  }}
+                />
+              </Field>
+            </div>
+            {eddPreview ? (
+              <div className="alert info">
+                <b>ПДР: {formatDate(eddPreview.edd)}</b>
+                <br />
+                Текущий срок: {eddPreview.gestationalWeek} недель
+              </div>
+            ) : null}
+            {eddError ? <ErrorBox message={eddError} /> : null}
+            <div className="row mt">
+              <button
+                className="btn"
+                type="button"
+                disabled={eddBusy}
+                onClick={() => void previewEdd()}
+              >
+                Рассчитать
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={eddBusy || !eddPreview}
+                onClick={() => void applyEdd()}
+              >
+                Применить
+              </button>
+              <button className="btn btn-ghost" type="button" onClick={() => setEddOpen(false)}>
+                Отмена
+              </button>
             </div>
           </div>
         </div>

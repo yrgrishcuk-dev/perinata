@@ -13,7 +13,12 @@ export type AlarmType =
   | "WEIGHT"
   | "MISSED_DIARY"
   | "WATERS"
-  | "APPOINTMENT_RESPONSE";
+  | "APPOINTMENT_RESPONSE"
+  | "DISCHARGE"
+  | "VAGINAL_PH"
+  | "FETAL_MOVEMENTS"
+  | "ABDOMINAL_PAIN"
+  | "EDEMA";
 export type GlucoseContext = "FASTING" | "POSTPRANDIAL";
 export type MessageDirection = "TO_PATIENT" | "TO_DOCTOR";
 export type AuthorType = "DOCTOR" | "PATIENT" | "SYSTEM";
@@ -94,6 +99,12 @@ export interface RationView {
   meals: Meal[];
 }
 
+export type DischargeCharacter = "NONE" | "NORMAL" | "MUCOUS" | "WATERY" | "BLOODY";
+export type DischargeAmount = "NORMAL" | "ABUNDANT";
+export type FetalMovements = "NORMAL" | "LESS" | "NONE" | "NOT_TRACKED";
+export type AbdominalPain = "NONE" | "PULLING" | "CRAMPING" | "SHARP" | "OTHER";
+export type LegEdema = "NONE" | "MILD" | "PRONOUNCED" | "ASYMMETRIC";
+
 export interface DiaryView {
   id: number;
   date: string;
@@ -104,6 +115,14 @@ export interface DiaryView {
   glucoseMmol: number | null;
   glucoseContext: GlucoseContext | null;
   note: string | null;
+  dischargeCharacter: DischargeCharacter | null;
+  dischargeAmount: DischargeAmount | null;
+  dischargeOdor: boolean | null;
+  vaginalPh: number | null;
+  fetalMovements: FetalMovements | null;
+  lowerAbdominalPain: AbdominalPain | null;
+  painIntensity: number | null;
+  legEdema: LegEdema | null;
   updatedAt: string;
 }
 
@@ -226,6 +245,18 @@ export interface PatientDetails {
   prePregnancyWeightKg: number | null;
   reminderTime: string;
   comment: string | null;
+  eddMethod: "LMP" | "MANUAL";
+  eddBasisDate: string | null;
+  eddCycleLength: number | null;
+  eddCalculatedAt: string | null;
+}
+
+export interface EddPreview {
+  edd: string;
+  lmpDate: string;
+  cycleLength: number;
+  gestationalWeek: number;
+  method: "LMP" | "MANUAL";
 }
 
 export interface DashboardView {

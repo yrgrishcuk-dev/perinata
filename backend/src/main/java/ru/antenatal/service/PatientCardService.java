@@ -106,7 +106,13 @@ public class PatientCardService {
         }
         if (request.edd() != null) {
             validateEdd(request.edd());
-            card.setEdd(request.edd());
+            if (!request.edd().equals(card.getEdd())) {
+                card.setEdd(request.edd());
+                card.setEddMethod(ru.antenatal.domain.EddMethod.MANUAL);
+                card.setEddBasisDate(null);
+                card.setEddCycleLength(null);
+                card.setEddCalculatedAt(null);
+            }
         }
         if (request.heightCm() != null) {
             card.setHeightCm(request.heightCm());
@@ -219,7 +225,11 @@ public class PatientCardService {
                 card.getHeightCm(),
                 card.getPrePregnancyWeightKg(),
                 card.getReminderTime(),
-                card.getComment());
+                card.getComment(),
+                card.getEddMethod(),
+                card.getEddBasisDate(),
+                card.getEddCycleLength(),
+                card.getEddCalculatedAt());
     }
 
     @Transactional(readOnly = true)
@@ -344,7 +354,7 @@ public class PatientCardService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private void validateEdd(LocalDate edd) {
+    void validateEdd(LocalDate edd) {
         LocalDate today = LocalDate.now(ZoneId.of(appProperties.getClinicTimezone()));
         if (edd.isBefore(today.minusDays(30)) || edd.isAfter(today.plusDays(300))) {
             throw ApiException.badRequest("ПДР вне допустимого диапазона");

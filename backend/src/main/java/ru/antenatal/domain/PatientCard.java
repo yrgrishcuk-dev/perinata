@@ -45,6 +45,16 @@ public class PatientCard extends BaseEntity {
     @Column(nullable = false)
     private LocalDate edd;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private EddMethod eddMethod = EddMethod.MANUAL;
+
+    private LocalDate eddBasisDate;
+
+    private Integer eddCycleLength;
+
+    private Instant eddCalculatedAt;
+
     @Column(precision = 5, scale = 1)
     private BigDecimal heightCm;
 
