@@ -3,7 +3,12 @@ package ru.antenatal.web.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import ru.antenatal.domain.AbdominalPain;
+import ru.antenatal.domain.DischargeAmount;
+import ru.antenatal.domain.DischargeCharacter;
+import ru.antenatal.domain.FetalMovements;
 import ru.antenatal.domain.GlucoseContext;
+import ru.antenatal.domain.LegEdema;
 import ru.antenatal.domain.Severity;
 
 import java.math.BigDecimal;
@@ -50,6 +55,14 @@ public final class PatientDtos {
             BigDecimal glucoseMmol,
             GlucoseContext glucoseContext,
             String note,
+            DischargeCharacter dischargeCharacter,
+            DischargeAmount dischargeAmount,
+            Boolean dischargeOdor,
+            BigDecimal vaginalPh,
+            FetalMovements fetalMovements,
+            AbdominalPain lowerAbdominalPain,
+            Integer painIntensity,
+            LegEdema legEdema,
             Instant updatedAt
     ) {
     }
@@ -62,7 +75,15 @@ public final class PatientDtos {
             BigDecimal weightKg,
             BigDecimal glucoseMmol,
             GlucoseContext glucoseContext,
-            String note
+            String note,
+            DischargeCharacter dischargeCharacter,
+            DischargeAmount dischargeAmount,
+            Boolean dischargeOdor,
+            BigDecimal vaginalPh,
+            FetalMovements fetalMovements,
+            AbdominalPain lowerAbdominalPain,
+            Integer painIntensity,
+            LegEdema legEdema
     ) {
     }
 

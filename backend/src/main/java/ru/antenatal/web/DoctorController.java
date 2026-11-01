@@ -25,6 +25,7 @@ import ru.antenatal.service.AppointmentService;
 import ru.antenatal.service.AppointmentAnalyticsService;
 import ru.antenatal.service.CalendarEventService;
 import ru.antenatal.service.CalendarFeedService;
+import ru.antenatal.service.EddService;
 import ru.antenatal.service.DiaryService;
 import ru.antenatal.service.DoctorAccessService;
 import ru.antenatal.service.LinkService;
@@ -42,6 +43,8 @@ import ru.antenatal.web.dto.CalendarDtos.CalendarEventRequest;
 import ru.antenatal.web.dto.CalendarDtos.CalendarEventView;
 import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedLink;
 import ru.antenatal.web.dto.CalendarFeedDtos.CalendarFeedStatus;
+import ru.antenatal.web.dto.EddDtos.EddCalcRequest;
+import ru.antenatal.web.dto.EddDtos.EddPreview;
 import ru.antenatal.web.dto.DoctorDtos.AlertActionRequest;
 import ru.antenatal.web.dto.DoctorDtos.CloseRequest;
 import ru.antenatal.web.dto.DoctorDtos.DashboardView;
@@ -79,6 +82,7 @@ public class DoctorController {
     private final AppointmentService appointmentService;
     private final AppointmentAnalyticsService appointmentAnalyticsService;
     private final CalendarFeedService calendarFeedService;
+    private final EddService eddService;
 
     @GetMapping("/dashboard")
     public DashboardView dashboard(@AuthenticationPrincipal CurrentPrincipal principal) {
@@ -105,6 +109,22 @@ public class DoctorController {
                                   @PathVariable Long id) {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
         return patientCardService.details(doctor, id);
+    }
+
+    @PostMapping("/patients/{id}/edd/preview")
+    public EddPreview previewEdd(@AuthenticationPrincipal CurrentPrincipal principal,
+                                 @PathVariable Long id,
+                                 @Valid @RequestBody EddCalcRequest request) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return eddService.preview(doctor, id, request);
+    }
+
+    @PostMapping("/patients/{id}/edd/apply")
+    public PatientDetails applyEdd(@AuthenticationPrincipal CurrentPrincipal principal,
+                                   @PathVariable Long id,
+                                   @Valid @RequestBody EddCalcRequest request) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return eddService.apply(doctor, id, request);
     }
 
     @PatchMapping("/patients/{id}")

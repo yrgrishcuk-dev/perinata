@@ -45,6 +45,33 @@ public class DiaryEntry extends BaseEntity {
     @Column(columnDefinition = "text")
     private String note;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private DischargeCharacter dischargeCharacter;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private DischargeAmount dischargeAmount;
+
+    private Boolean dischargeOdor;
+
+    @Column(precision = 3, scale = 1)
+    private BigDecimal vaginalPh;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private FetalMovements fetalMovements;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private AbdominalPain lowerAbdominalPain;
+
+    private Integer painIntensity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private LegEdema legEdema;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 

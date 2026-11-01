@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBox, Field, Spinner } from "../components/ui";
 import { request } from "../api";
-import { formatDate, todayIso } from "../format";
+import { diaryObservationsSummary, formatDate, todayIso } from "../format";
 import { usePatient } from "../session";
-import type { DiarySaveResponse, DiaryView, GlucoseContext } from "../types";
+import type {
+  AbdominalPain,
+  DiarySaveResponse,
+  DiaryView,
+  DischargeAmount,
+  DischargeCharacter,
+  FetalMovements,
+  GlucoseContext,
+  LegEdema
+} from "../types";
 
 function asNumber(value: string): number | null {
   if (!value.trim()) {
@@ -28,6 +37,15 @@ export default function DiaryPage() {
   const [glucoseContext, setGlucoseContext] = useState<GlucoseContext>("FASTING");
   const [note, setNote] = useState("");
 
+  const [dischargeCharacter, setDischargeCharacter] = useState<DischargeCharacter | "">("");
+  const [dischargeAmount, setDischargeAmount] = useState<DischargeAmount | "">("");
+  const [dischargeOdor, setDischargeOdor] = useState<"" | "yes" | "no">("");
+  const [vaginalPh, setVaginalPh] = useState("");
+  const [fetalMovements, setFetalMovements] = useState<FetalMovements>("NOT_TRACKED");
+  const [lowerAbdominalPain, setLowerAbdominalPain] = useState<AbdominalPain | "">("");
+  const [painIntensity, setPainIntensity] = useState("");
+  const [legEdema, setLegEdema] = useState<LegEdema | "">("");
+
   const [message, setMessage] = useState<string | null>(null);
   const [severity, setSeverity] = useState<string | null>(null);
 
@@ -51,6 +69,16 @@ export default function DiaryPage() {
         setGlucose(today.glucoseMmol != null ? String(today.glucoseMmol) : "");
         setGlucoseContext(today.glucoseContext ?? "FASTING");
         setNote(today.note ?? "");
+        setDischargeCharacter(today.dischargeCharacter ?? "");
+        setDischargeAmount(today.dischargeAmount ?? "");
+        setDischargeOdor(
+          today.dischargeOdor == null ? "" : today.dischargeOdor ? "yes" : "no"
+        );
+        setVaginalPh(today.vaginalPh != null ? String(today.vaginalPh) : "");
+        setFetalMovements(today.fetalMovements ?? "NOT_TRACKED");
+        setLowerAbdominalPain(today.lowerAbdominalPain ?? "");
+        setPainIntensity(today.painIntensity != null ? String(today.painIntensity) : "");
+        setLegEdema(today.legEdema ?? "");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить дневник");
@@ -74,9 +102,17 @@ export default function DiaryPage() {
   }
 
   const diabetes = me.home.summary.diabetesType !== "NONE";
+  const showMovements = me.home.summary.gestationalWeek >= 20;
+  const hasDischarge =
+    dischargeCharacter !== "" && dischargeCharacter !== "NONE";
+  const hasPain = lowerAbdominalPain !== "" && lowerAbdominalPain !== "NONE";
 
   const save = async () => {
     if (!token) {
+      return;
+    }
+    if (hasPain && asNumber(painIntensity) == null) {
+      setError("Укажите интенсивность боли");
       return;
     }
     setSaving(true);
@@ -92,7 +128,16 @@ export default function DiaryPage() {
         weightKg: asNumber(weight),
         glucoseMmol: diabetes ? asNumber(glucose) : null,
         glucoseContext: diabetes && asNumber(glucose) != null ? glucoseContext : null,
-        note: note.trim() || null
+        note: note.trim() || null,
+        dischargeCharacter: dischargeCharacter || null,
+        dischargeAmount: hasDischarge && dischargeAmount ? dischargeAmount : null,
+        dischargeOdor:
+          hasDischarge && dischargeOdor ? dischargeOdor === "yes" : null,
+        vaginalPh: asNumber(vaginalPh),
+        fetalMovements: showMovements ? fetalMovements : null,
+        lowerAbdominalPain: lowerAbdominalPain || null,
+        painIntensity: hasPain ? asNumber(painIntensity) : null,
+        legEdema: legEdema || null
       };
       const result = await request<DiarySaveResponse>("/api/patient/diary", {
         method: "POST",
@@ -155,6 +200,118 @@ export default function DiaryPage() {
           </div>
         ) : null}
 
+        <h2 style={{ fontSize: 16, marginTop: 16 }}>Наблюдения</h2>
+
+        <div className="grid two">
+          <Field label="Выделения из половых путей">
+            <select
+              value={dischargeCharacter}
+              onChange={(event) => {
+                const value = event.target.value as DischargeCharacter | "";
+                setDischargeCharacter(value);
+                if (!value || value === "NONE") {
+                  setDischargeAmount("");
+                  setDischargeOdor("");
+                }
+              }}
+            >
+              <option value="">Не заполнено</option>
+              <option value="NONE">Нет</option>
+              <option value="NORMAL">Обычные</option>
+              <option value="MUCOUS">Слизистые</option>
+              <option value="WATERY">Водянистые</option>
+              <option value="BLOODY">Кровянистые</option>
+            </select>
+          </Field>
+          <Field label="Количество">
+            <select
+              value={dischargeAmount}
+              disabled={!hasDischarge}
+              onChange={(event) => setDischargeAmount(event.target.value as DischargeAmount | "")}
+            >
+              <option value="">Не заполнено</option>
+              <option value="NORMAL">Обычно</option>
+              <option value="ABUNDANT">Обильно</option>
+            </select>
+          </Field>
+          <Field label="Запах">
+            <select
+              value={dischargeOdor}
+              disabled={!hasDischarge}
+              onChange={(event) => setDischargeOdor(event.target.value as "" | "yes" | "no")}
+            >
+              <option value="">Не заполнено</option>
+              <option value="no">Нет</option>
+              <option value="yes">Есть</option>
+            </select>
+          </Field>
+          <Field label="pH влагалища (кольпо-тест)">
+            <input
+              inputMode="decimal"
+              value={vaginalPh}
+              onChange={(event) => setVaginalPh(event.target.value)}
+              placeholder="4.5"
+            />
+          </Field>
+        </div>
+
+        {showMovements ? (
+          <Field label="Шевеления плода">
+            <select
+              value={fetalMovements}
+              onChange={(event) => setFetalMovements(event.target.value as FetalMovements)}
+            >
+              <option value="NORMAL">Обычные</option>
+              <option value="LESS">Меньше обычного</option>
+              <option value="NONE">Нет</option>
+              <option value="NOT_TRACKED">Не отслеживала</option>
+            </select>
+          </Field>
+        ) : null}
+
+        <div className="grid two">
+          <Field label="Боли внизу живота">
+            <select
+              value={lowerAbdominalPain}
+              onChange={(event) => {
+                const value = event.target.value as AbdominalPain | "";
+                setLowerAbdominalPain(value);
+                if (!value || value === "NONE") {
+                  setPainIntensity("");
+                }
+              }}
+            >
+              <option value="">Не заполнено</option>
+              <option value="NONE">Нет</option>
+              <option value="PULLING">Тянущие</option>
+              <option value="CRAMPING">Схваткообразные</option>
+              <option value="SHARP">Острые</option>
+              <option value="OTHER">Другое</option>
+            </select>
+          </Field>
+          <Field label="Интенсивность боли, 0–10">
+            <input
+              type="number"
+              min={0}
+              max={10}
+              value={painIntensity}
+              disabled={!hasPain}
+              onChange={(event) => setPainIntensity(event.target.value)}
+              placeholder="0"
+            />
+          </Field>
+        </div>
+
+        <Field label="Отёки нижних конечностей">
+          <select value={legEdema} onChange={(event) => setLegEdema(event.target.value as LegEdema | "")}>
+            <option value="">Не заполнено</option>
+            <option value="NONE">Нет</option>
+            <option value="MILD">Небольшие</option>
+            <option value="PRONOUNCED">Выраженные</option>
+            <option value="ASYMMETRIC">Асимметричные</option>
+          </select>
+        </Field>
+
         <Field label="Заметка (необязательно)">
           <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Самочувствие, вопросы врачу" />
         </Field>
@@ -184,6 +341,7 @@ export default function DiaryPage() {
                   <th>Пульс</th>
                   <th>Вес</th>
                   <th>Глюкоза</th>
+                  <th>Наблюдения</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,6 +361,7 @@ export default function DiaryPage() {
                             }`
                           : "—"}
                       </td>
+                      <td>{diaryObservationsSummary(entry) || "—"}</td>
                     </tr>
                   ))}
               </tbody>
