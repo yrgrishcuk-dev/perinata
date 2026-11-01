@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ErrorBox, Spinner } from "../components/ui";
 import { request } from "../api";
 import { usePatient } from "../session";
@@ -81,6 +82,15 @@ export default function WeekPage() {
               {bundle.content.nutritionText}
             </p>
           </div>
+          <div className="card">
+            <h2>Рекомендации</h2>
+            <p className="muted" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              {bundle.content.recommendationsText}
+            </p>
+          </div>
+          <Link className="btn btn-ghost btn-block mt" to="/app/guide">
+            Памятка для беременной
+          </Link>
           <div className="alert warn">
             <b>Когда обращаться срочно</b>
             <p className="mt">{bundle.content.warningText}</p>

@@ -11,6 +11,7 @@ import DiaryPage from "./mini/DiaryPage";
 import SymptomsPage from "./mini/SymptomsPage";
 import ContractionsPage from "./mini/ContractionsPage";
 import WeekPage from "./mini/WeekPage";
+import GuidePage from "./mini/GuidePage";
 import MessagesPage from "./mini/MessagesPage";
 import ProfilePage from "./mini/ProfilePage";
 import LoginPage from "./cabinet/LoginPage";
@@ -106,7 +107,7 @@ export default function App() {
         <Route path="symptoms" element={<SymptomsPage />} />
         <Route path="contractions" element={<ContractionsPage />} />
         <Route path="week" element={<WeekPage />} />
-        <Route path="messages" element={<MessagesPage />} />
+        <Route path="guide" element={<GuidePage />} />        <Route path="messages" element={<MessagesPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

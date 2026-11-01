@@ -78,6 +78,7 @@ export interface WeekContent {
   title: string;
   fetalText: string;
   nutritionText: string;
+  recommendationsText: string;
   warningText: string;
 }
 
