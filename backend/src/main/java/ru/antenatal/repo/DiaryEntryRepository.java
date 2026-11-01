@@ -22,4 +22,6 @@ public interface DiaryEntryRepository extends JpaRepository<DiaryEntry, Long> {
     List<DiaryEntry> findTop2ByPatientCardIdAndWeightKgIsNotNullOrderByEntryDateDesc(Long patientCardId);
 
     boolean existsByPatientCardIdAndEntryDate(Long patientCardId, LocalDate entryDate);
+
+    List<DiaryEntry> findByKickStartedAtIsNotNullAndKickEndedAtIsNull();
 }

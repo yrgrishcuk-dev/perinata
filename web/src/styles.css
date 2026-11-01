@@ -2214,3 +2214,12 @@ th {
   }
 }
 
+
+.gain-advice {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.ok-text {
+  color: var(--ok);
+}

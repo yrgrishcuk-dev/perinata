@@ -127,10 +127,12 @@ public class DiaryService {
             }
         }
 
-        AlarmEvent weightAlarm = evaluateWeight(card, thresholdMap);
-        if (weightAlarm != null && topAlarm == null) {
-            topAlarm = weightAlarm;
-            topMessage = "Прибавка веса выше коридора. Сообщите врачу и проверьте рацион.";
+        WeightEvaluation weight = evaluateWeight(card, thresholdMap);
+        if (weight != null && (topSeverity == null
+                || severityRank(weight.severity()) > severityRank(topSeverity))) {
+            topAlarm = weight.event();
+            topMessage = weight.message();
+            topSeverity = weight.severity();
         }
 
         for (ObservationAlert observation : evaluateObservations(card, request, date)) {
@@ -168,7 +170,7 @@ public class DiaryService {
                 .map(this::view).orElse(null);
     }
 
-    private AlarmEvent evaluateWeight(PatientCard card, Map<String, BigDecimal> thresholdMap) {
+    private WeightEvaluation evaluateWeight(PatientCard card, Map<String, BigDecimal> thresholdMap) {
         if (card.getPrePregnancyWeightKg() == null) {
             return null;
         }
@@ -181,29 +183,47 @@ public class DiaryService {
                 && gain.gainKg().subtract(gain.maxGainKg()).compareTo(threshold) >= 0;
 
         boolean weeklyJump = false;
-        BigDecimal weeklyChange = null;
+        BigDecimal change = null;
+        long days = 0;
         List<DiaryEntry> weights = diaryEntryRepository
                 .findTop2ByPatientCardIdAndWeightKgIsNotNullOrderByEntryDateDesc(card.getId());
         if (weights.size() == 2) {
             DiaryEntry current = weights.get(0);
             DiaryEntry previous = weights.get(1);
-            long days = ChronoUnit.DAYS.between(previous.getEntryDate(), current.getEntryDate());
-            if (days > 0 && days <= 7) {
-                weeklyChange = current.getWeightKg().subtract(previous.getWeightKg());
-                weeklyJump = weeklyChange.compareTo(threshold) >= 0;
-            }
+            days = ChronoUnit.DAYS.between(previous.getEntryDate(), current.getEntryDate());
+            change = current.getWeightKg().subtract(previous.getWeightKg());
+            weeklyJump = days > 0 && days <= 7 && change.compareTo(threshold) >= 0;
         }
 
-        if (!aboveCorridor && !weeklyJump) {
+        Severity severity = null;
+        String message = null;
+        if (change != null && days > 0 && days <= 10
+                && change.compareTo(BigDecimal.valueOf(-3)) <= 0) {
+            severity = Severity.CRITICAL;
+            message = "Резкая потеря веса. Свяжитесь с врачом.";
+        } else if (change != null && days > 0 && days <= 7
+                && change.compareTo(BigDecimal.valueOf(-2)) <= 0) {
+            severity = Severity.WARNING;
+            message = "Заметная потеря веса. Обсудите это с врачом.";
+        } else if (aboveCorridor || weeklyJump) {
+            severity = Severity.WARNING;
+            message = "Прибавка веса выше коридора. Сообщите врачу и проверьте рацион.";
+        }
+        if (severity == null) {
             return null;
         }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("gainKg", gain.gainKg());
         payload.put("maxGainKg", gain.maxGainKg());
-        payload.put("weeklyChangeKg", weeklyChange);
-        return alertService.raise(card, AlarmType.WEIGHT, Severity.WARNING,
+        payload.put("changeKg", change);
+        payload.put("days", days);
+        AlarmEvent event = alertService.raise(card, AlarmType.WEIGHT, severity,
                 payload, Duration.ofHours(23));
+        return new WeightEvaluation(event, severity, message);
+    }
+
+    private record WeightEvaluation(AlarmEvent event, Severity severity, String message) {
     }
 
     private List<ObservationAlert> evaluateObservations(PatientCard card,
@@ -303,6 +323,12 @@ public class DiaryService {
     }
 
     public DiaryView view(DiaryEntry entry) {
+        Integer kickDurationSeconds = entry.getKickStartedAt() == null
+                ? null
+                : (int) Duration.between(
+                        entry.getKickStartedAt(),
+                        entry.getKickEndedAt() == null ? Instant.now() : entry.getKickEndedAt())
+                .getSeconds();
         return new DiaryView(
                 entry.getId(),
                 entry.getEntryDate(),
@@ -323,6 +349,10 @@ public class DiaryService {
                 entry.getLegEdema(),
                 entry.getSleepQuality(),
                 entry.getHeadache(),
+                entry.getKickStartedAt(),
+                entry.getKickEndedAt(),
+                entry.getKickCount(),
+                kickDurationSeconds,
                 entry.getUpdatedAt());
     }
 
