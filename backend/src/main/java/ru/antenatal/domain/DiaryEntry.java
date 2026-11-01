@@ -72,6 +72,14 @@ public class DiaryEntry extends BaseEntity {
     @Column(length = 16)
     private LegEdema legEdema;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private SleepQuality sleepQuality;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private Headache headache;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 

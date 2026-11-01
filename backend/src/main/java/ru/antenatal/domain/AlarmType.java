@@ -13,5 +13,6 @@ public enum AlarmType {
     VAGINAL_PH,
     FETAL_MOVEMENTS,
     ABDOMINAL_PAIN,
-    EDEMA
+    EDEMA,
+    HEADACHE
 }

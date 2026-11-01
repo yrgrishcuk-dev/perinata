@@ -8,9 +8,11 @@ import type {
   DischargeAmount,
   DischargeCharacter,
   FetalMovements,
+  Headache,
   LegEdema,
   PatientResponse,
-  Severity
+  Severity,
+  SleepQuality
 } from "./types";
 
 export function formatDate(value?: string | null): string {
@@ -186,6 +188,8 @@ export function alarmTypeLabel(type: AlarmType): string {
       return "Р‘РѕР»СЊ РІРЅРёР·Сѓ Р¶РёРІРѕС‚Р°";
     case "EDEMA":
       return "РћС‚С‘РєРё РЅРѕРі";
+    case "HEADACHE":
+      return "Р“РѕР»РѕРІРЅР°СЏ Р±РѕР»СЊ";
     default:
       return type;
   }
@@ -243,62 +247,88 @@ export function formatSeconds(value?: number | null): string {
 export function dischargeCharacterLabel(value: DischargeCharacter): string {
   switch (value) {
     case "NONE":
-      return "Нет";
+      return "РќРµС‚";
     case "NORMAL":
-      return "Обычные";
+      return "РћР±С‹С‡РЅС‹Рµ";
     case "MUCOUS":
-      return "Слизистые";
+      return "РЎР»РёР·РёСЃС‚С‹Рµ";
     case "WATERY":
-      return "Водянистые";
+      return "Р’РѕРґСЏРЅРёСЃС‚С‹Рµ";
     case "BLOODY":
-      return "Кровянистые";
+      return "РљСЂРѕРІСЏРЅРёСЃС‚С‹Рµ";
     default:
       return value;
   }
 }
 
 export function dischargeAmountLabel(value: DischargeAmount): string {
-  return value === "ABUNDANT" ? "Обильно" : "Обычно";
+  return value === "ABUNDANT" ? "РћР±РёР»СЊРЅРѕ" : "РћР±С‹С‡РЅРѕ";
 }
 
 export function fetalMovementsLabel(value: FetalMovements): string {
   switch (value) {
     case "NORMAL":
-      return "Обычные";
+      return "РћР±С‹С‡РЅС‹Рµ";
     case "LESS":
-      return "Меньше обычного";
+      return "РњРµРЅСЊС€Рµ РѕР±С‹С‡РЅРѕРіРѕ";
     case "NONE":
-      return "Нет";
+      return "РќРµС‚";
     default:
-      return "Не отслеживала";
+      return "РќРµ РѕС‚СЃР»РµР¶РёРІР°Р»Р°";
   }
 }
 
 export function abdominalPainLabel(value: AbdominalPain): string {
   switch (value) {
     case "NONE":
-      return "Нет";
+      return "РќРµС‚";
     case "PULLING":
-      return "Тянущие";
+      return "РўСЏРЅСѓС‰РёРµ";
     case "CRAMPING":
-      return "Схваткообразные";
+      return "РЎС…РІР°С‚РєРѕРѕР±СЂР°Р·РЅС‹Рµ";
     case "SHARP":
-      return "Острые";
+      return "РћСЃС‚СЂС‹Рµ";
     default:
-      return "Другое";
+      return "Р”СЂСѓРіРѕРµ";
   }
 }
 
 export function legEdemaLabel(value: LegEdema): string {
   switch (value) {
     case "NONE":
-      return "Нет";
+      return "РќРµС‚";
     case "MILD":
-      return "Небольшие";
+      return "РќРµР±РѕР»СЊС€РёРµ";
     case "PRONOUNCED":
-      return "Выраженные";
+      return "Р’С‹СЂР°Р¶РµРЅРЅС‹Рµ";
     default:
-      return "Асимметричные";
+      return "РђСЃРёРјРјРµС‚СЂРёС‡РЅС‹Рµ";
+  }
+}
+
+export function sleepQualityLabel(value: SleepQuality): string {
+  switch (value) {
+    case "GOOD":
+      return "РҐРѕСЂРѕС€РёР№";
+    case "RESTLESS":
+      return "Р‘РµСЃРїРѕРєРѕР№РЅС‹Р№";
+    case "POOR":
+      return "РџР»РѕС…РѕР№";
+    default:
+      return "РћР±С‹С‡РЅС‹Р№";
+  }
+}
+
+export function headacheLabel(value: Headache): string {
+  switch (value) {
+    case "NONE":
+      return "РќРµС‚";
+    case "MILD":
+      return "Р›С‘РіРєР°СЏ";
+    case "SEVERE":
+      return "РЎРёР»СЊРЅР°СЏ";
+    default:
+      return "РЈРјРµСЂРµРЅРЅР°СЏ";
   }
 }
 
@@ -310,23 +340,29 @@ export function diaryObservationsSummary(entry: DiaryView): string {
       discharge += `, ${dischargeAmountLabel(entry.dischargeAmount).toLowerCase()}`;
     }
     if (entry.dischargeOdor) {
-      discharge += ", запах";
+      discharge += ", Р·Р°РїР°С…";
     }
-    parts.push(`Выделения: ${discharge}`);
+    parts.push(`Р’С‹РґРµР»РµРЅРёСЏ: ${discharge}`);
   }
   if (entry.vaginalPh != null) {
     parts.push(`pH: ${entry.vaginalPh}`);
   }
   if (entry.fetalMovements) {
-    parts.push(`Шевеления: ${fetalMovementsLabel(entry.fetalMovements).toLowerCase()}`);
+    parts.push(`РЁРµРІРµР»РµРЅРёСЏ: ${fetalMovementsLabel(entry.fetalMovements).toLowerCase()}`);
   }
   if (entry.lowerAbdominalPain) {
     const pain = abdominalPainLabel(entry.lowerAbdominalPain);
     const intensity = entry.painIntensity != null ? ` ${entry.painIntensity}/10` : "";
-    parts.push(`Боль: ${pain}${intensity}`);
+    parts.push(`Р‘РѕР»СЊ: ${pain}${intensity}`);
   }
   if (entry.legEdema) {
-    parts.push(`Отёки: ${legEdemaLabel(entry.legEdema).toLowerCase()}`);
+    parts.push(`РћС‚С‘РєРё: ${legEdemaLabel(entry.legEdema).toLowerCase()}`);
   }
-  return parts.join(" · ");
+  if (entry.sleepQuality) {
+    parts.push(`РЎРѕРЅ: ${sleepQualityLabel(entry.sleepQuality).toLowerCase()}`);
+  }
+  if (entry.headache && entry.headache !== "NONE") {
+    parts.push(`Р“РѕР»РѕРІРЅР°СЏ Р±РѕР»СЊ: ${headacheLabel(entry.headache).toLowerCase()}`);
+  }
+  return parts.join(" В· ");
 }

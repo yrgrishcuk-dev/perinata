@@ -11,7 +11,9 @@ import type {
   DischargeCharacter,
   FetalMovements,
   GlucoseContext,
-  LegEdema
+  Headache,
+  LegEdema,
+  SleepQuality
 } from "../types";
 
 function asNumber(value: string): number | null {
@@ -45,6 +47,8 @@ export default function DiaryPage() {
   const [lowerAbdominalPain, setLowerAbdominalPain] = useState<AbdominalPain | "">("");
   const [painIntensity, setPainIntensity] = useState("");
   const [legEdema, setLegEdema] = useState<LegEdema | "">("");
+  const [sleepQuality, setSleepQuality] = useState<SleepQuality | "">("");
+  const [headache, setHeadache] = useState<Headache | "">("");
 
   const [message, setMessage] = useState<string | null>(null);
   const [severity, setSeverity] = useState<string | null>(null);
@@ -79,6 +83,8 @@ export default function DiaryPage() {
         setLowerAbdominalPain(today.lowerAbdominalPain ?? "");
         setPainIntensity(today.painIntensity != null ? String(today.painIntensity) : "");
         setLegEdema(today.legEdema ?? "");
+        setSleepQuality(today.sleepQuality ?? "");
+        setHeadache(today.headache ?? "");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить дневник");
@@ -137,7 +143,9 @@ export default function DiaryPage() {
         fetalMovements: showMovements ? fetalMovements : null,
         lowerAbdominalPain: lowerAbdominalPain || null,
         painIntensity: hasPain ? asNumber(painIntensity) : null,
-        legEdema: legEdema || null
+        legEdema: legEdema || null,
+        sleepQuality: sleepQuality || null,
+        headache: headache || null
       };
       const result = await request<DiarySaveResponse>("/api/patient/diary", {
         method: "POST",
@@ -311,6 +319,37 @@ export default function DiaryPage() {
             <option value="ASYMMETRIC">Асимметричные</option>
           </select>
         </Field>
+
+        <div className="grid two">
+          <Field label="Качество сна">
+            <select
+              value={sleepQuality}
+              onChange={(event) => setSleepQuality(event.target.value as SleepQuality | "")}
+            >
+              <option value="">Не заполнено</option>
+              <option value="GOOD">Хороший</option>
+              <option value="NORMAL">Обычный</option>
+              <option value="RESTLESS">Беспокойный</option>
+              <option value="POOR">Плохой</option>
+            </select>
+          </Field>
+          <Field label="Головная боль">
+            <select
+              value={headache}
+              onChange={(event) => setHeadache(event.target.value as Headache | "")}
+            >
+              <option value="">Не заполнено</option>
+              <option value="NONE">Нет</option>
+              <option value="MILD">Лёгкая</option>
+              <option value="MODERATE">Умеренная</option>
+              <option value="SEVERE">Сильная</option>
+            </select>
+          </Field>
+        </div>
+        <p className="notice">
+          При умеренной или сильной головной боли измерьте давление. При давлении 140/90 и
+          выше — срочно свяжитесь с врачом.
+        </p>
 
         <Field label="Заметка (необязательно)">
           <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Самочувствие, вопросы врачу" />

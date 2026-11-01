@@ -30,6 +30,9 @@ public class WeekContent extends BaseEntity {
     private String fetalText;
 
     @Column(nullable = false, columnDefinition = "text")
+    private String maternalText;
+
+    @Column(nullable = false, columnDefinition = "text")
     private String nutritionText;
 
     @Column(nullable = false, columnDefinition = "text")

@@ -37,7 +37,7 @@ public class SymptomService {
 
     private static final String RED_MESSAGE =
             "Немедленно обратитесь к врачу или вызовите 103/112. "
-                    + "Не оставайтесь дома одна, возьмите документы и позвоните в приёмное отделение.";
+                    + "Не оставайтесь дома одна, возьмите документы.";
 
     private final SymptomReportRepository symptomReportRepository;
     private final AlertService alertService;
