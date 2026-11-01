@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AppointmentCard } from "../components/AppointmentCard";
+import { GainAdvice } from "../components/GainAdvice";
 import { GainChart } from "../components/GainChart";
 import { request } from "../api";
 import { usePatient } from "../session";
@@ -124,6 +125,11 @@ export default function HomePage() {
           </p>
         ) : null}
         <GainChart gain={gain} />
+        <GainAdvice
+          bmiCategory={summary.bmiCategory}
+          bmi={summary.bmi}
+          gain={gain}
+        />
       </div>
 
       <div className="card">

@@ -244,6 +244,15 @@ export function formatSeconds(value?: number | null): string {
   return `${minutes} мин ${String(seconds).padStart(2, "0")} с`;
 }
 
+export function formatKickDuration(value?: number | null): string {
+  if (value == null || value < 0) {
+    return "00:00";
+  }
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function dischargeCharacterLabel(value: DischargeCharacter): string {
   switch (value) {
     case "NONE":
@@ -347,7 +356,11 @@ export function diaryObservationsSummary(entry: DiaryView): string {
   if (entry.vaginalPh != null) {
     parts.push(`pH: ${entry.vaginalPh}`);
   }
-  if (entry.fetalMovements) {
+  if (entry.kickCount > 0) {
+    parts.push(
+      `Шевеления: ${entry.kickCount} за ${formatKickDuration(entry.kickDurationSeconds)}`
+    );
+  } else if (entry.fetalMovements) {
     parts.push(`Шевеления: ${fetalMovementsLabel(entry.fetalMovements).toLowerCase()}`);
   }
   if (entry.lowerAbdominalPain) {

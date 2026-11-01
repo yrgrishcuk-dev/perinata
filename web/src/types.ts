@@ -130,6 +130,10 @@ export interface DiaryView {
   legEdema: LegEdema | null;
   sleepQuality: SleepQuality | null;
   headache: Headache | null;
+  kickStartedAt: string | null;
+  kickEndedAt: string | null;
+  kickCount: number;
+  kickDurationSeconds: number | null;
   updatedAt: string;
 }
 

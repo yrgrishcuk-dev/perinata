@@ -30,6 +30,7 @@ import ru.antenatal.service.ContentService;
 import ru.antenatal.service.ContractionService;
 import ru.antenatal.service.DiaryService;
 import ru.antenatal.service.GainService;
+import ru.antenatal.service.KickCounterService;
 import ru.antenatal.service.LinkService;
 import ru.antenatal.service.MessageService;
 import ru.antenatal.service.PatientAccessService;
@@ -76,6 +77,7 @@ public class PatientController {
     private final GainService gainService;
     private final ContentService contentService;
     private final DiaryService diaryService;
+    private final KickCounterService kickCounterService;
     private final SymptomService symptomService;
     private final ContractionService contractionService;
     private final AlertService alertService;
@@ -171,8 +173,23 @@ public class PatientController {
 
     @PostMapping("/diary")
     public DiarySaveResponse saveDiary(@AuthenticationPrincipal CurrentPrincipal principal,
-                                       @RequestBody DiarySaveRequest request) {
+                                       @Valid @RequestBody DiarySaveRequest request) {
         return diaryService.save(patientAccessService.requireCard(principal), request);
+    }
+
+    @PostMapping("/diary/kicks/start")
+    public DiaryView startKicks(@AuthenticationPrincipal CurrentPrincipal principal) {
+        return kickCounterService.start(patientAccessService.requireCard(principal));
+    }
+
+    @PostMapping("/diary/kicks/tap")
+    public DiaryView tapKick(@AuthenticationPrincipal CurrentPrincipal principal) {
+        return kickCounterService.tap(patientAccessService.requireCard(principal));
+    }
+
+    @PostMapping("/diary/kicks/finish")
+    public DiaryView finishKicks(@AuthenticationPrincipal CurrentPrincipal principal) {
+        return kickCounterService.finish(patientAccessService.requireCard(principal));
     }
 
     @PostMapping("/symptoms")

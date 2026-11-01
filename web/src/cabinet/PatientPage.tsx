@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { GainChart } from "../components/GainChart";
+import { GainAdvice } from "../components/GainAdvice";
+import { PhChart } from "../components/PhChart";
 import { Counter } from "../components/Counter";
 import { ActionMenu } from "../components/ActionMenu";
 import {
@@ -582,6 +584,11 @@ export default function PatientPage() {
                 : ""}
             </p>
             <GainChart gain={gain} />
+            <GainAdvice
+              bmiCategory={summary.bmiCategory}
+              bmi={summary.bmi}
+              gain={gain}
+            />
           </div>
 
           <div className="card">
@@ -634,6 +641,7 @@ export default function PatientPage() {
           {diary.length === 0 ? (
             <p className="muted mt">Записей пока нет.</p>
           ) : (
+            <>
             <div className="table-wrap mt">
               <table>
                 <thead>
@@ -671,6 +679,11 @@ export default function PatientPage() {
                 </tbody>
               </table>
             </div>
+            <div className="mt">
+              <h3 style={{ fontSize: 14 }}>pH влагалища</h3>
+              <PhChart entries={diary} />
+            </div>
+            </>
           )}
         </div>
       ) : null}

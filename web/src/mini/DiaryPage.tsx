@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBox, Field, Spinner } from "../components/ui";
+import { PhChart } from "../components/PhChart";
 import { request } from "../api";
-import { diaryObservationsSummary, formatDate, todayIso } from "../format";
+import {
+  diaryObservationsSummary,
+  formatDate,
+  formatKickDuration,
+  todayIso
+} from "../format";
 import { usePatient } from "../session";
 import type {
   AbdominalPain,
@@ -27,6 +33,10 @@ function asNumber(value: string): number | null {
 export default function DiaryPage() {
   const { me, token, refresh } = usePatient();
   const [entries, setEntries] = useState<DiaryView[]>([]);
+  const [todayDiary, setTodayDiary] = useState<DiaryView | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [kickBusy, setKickBusy] = useState(false);
+  const autoFinishing = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,6 +75,7 @@ export default function DiaryPage() {
         request<DiaryView | null>("/api/patient/diary/today", { token })
       ]);
       setEntries(history);
+      setTodayDiary(today);
       if (today) {
         setSbp(today.sbp != null ? String(today.sbp) : "");
         setDbp(today.dbp != null ? String(today.dbp) : "");
@@ -97,6 +108,14 @@ export default function DiaryPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!todayDiary?.kickStartedAt || todayDiary.kickEndedAt) {
+      return;
+    }
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [todayDiary?.kickStartedAt, todayDiary?.kickEndedAt]);
+
   if (!me?.home) {
     return null;
   }
@@ -112,6 +131,32 @@ export default function DiaryPage() {
   const hasDischarge =
     dischargeCharacter !== "" && dischargeCharacter !== "NONE";
   const hasPain = lowerAbdominalPain !== "" && lowerAbdominalPain !== "NONE";
+
+  const kickAction = async (path: string) => {
+    if (!token) {
+      return;
+    }
+    setKickBusy(true);
+    setError(null);
+    try {
+      const data = await request<DiaryView>(`/api/patient/diary/kicks/${path}`, {
+        method: "POST",
+        token
+      });
+      setTodayDiary(data);
+      setNow(Date.now());
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось обновить счётчик");
+    } finally {
+      setKickBusy(false);
+    }
+  };
+
+  const kickActive = Boolean(todayDiary?.kickStartedAt && !todayDiary.kickEndedAt);
+  const kickElapsed = todayDiary?.kickStartedAt
+    ? Math.max(0, Math.floor((now - new Date(todayDiary.kickStartedAt).getTime()) / 1000))
+    : 0;
 
   const save = async () => {
     if (!token) {
@@ -264,6 +309,7 @@ export default function DiaryPage() {
         </div>
 
         {showMovements ? (
+          <>
           <Field label="Шевеления плода">
             <select
               value={fetalMovements}
@@ -275,6 +321,67 @@ export default function DiaryPage() {
               <option value="NOT_TRACKED">Не отслеживала</option>
             </select>
           </Field>
+          <div className="row mt">
+            <button
+              className="btn btn-sm"
+              type="button"
+              onClick={() => setFetalMovements("NORMAL")}
+            >
+              Всё хорошо
+            </button>
+          </div>
+          <div className="card tight mt">
+            <b>Счётчик на 2 часа</b>
+            {kickActive ? (
+              <>
+                <p className="muted small">
+                  Прошло {formatKickDuration(kickElapsed)} · движений:{" "}
+                  <b>{todayDiary?.kickCount ?? 0}</b>
+                </p>
+                <button
+                  className="btn btn-primary btn-block btn-lg"
+                  type="button"
+                  disabled={kickBusy}
+                  onClick={() => void kickAction("tap")}
+                >
+                  Отметить шевеление
+                </button>
+                <button
+                  className="btn btn-ghost btn-block mt"
+                  type="button"
+                  disabled={kickBusy}
+                  onClick={() => void kickAction("finish")}
+                >
+                  Завершить
+                </button>
+              </>
+            ) : todayDiary?.kickEndedAt ? (
+              <>
+                <p className="muted small mt">
+                  {todayDiary.kickCount} движений за{" "}
+                  {formatKickDuration(todayDiary.kickDurationSeconds)}
+                </p>
+                <button
+                  className="btn btn-ghost btn-block mt"
+                  type="button"
+                  disabled={kickBusy}
+                  onClick={() => void kickAction("start")}
+                >
+                  Запустить заново
+                </button>
+              </>
+            ) : (
+              <button
+                className="btn btn-block mt"
+                type="button"
+                disabled={kickBusy}
+                onClick={() => void kickAction("start")}
+              >
+                Запустить счётчик
+              </button>
+            )}
+          </div>
+          </>
         ) : null}
 
         <div className="grid two">
@@ -407,6 +514,14 @@ export default function DiaryPage() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="card">
+        <h2>pH влагалища</h2>
+        <PhChart entries={entries} />
+        <p className="notice mt">
+          Норма ориентировочно до 5.0. Значение выше 5.0 — повод обсудить с врачом.
+        </p>
       </div>
     </>
   );

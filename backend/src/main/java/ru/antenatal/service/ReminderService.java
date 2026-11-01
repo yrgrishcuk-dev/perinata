@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import ru.antenatal.calc.GainCalculator;
 import ru.antenatal.config.AppProperties;
 import ru.antenatal.domain.AlarmType;
+import ru.antenatal.domain.DiaryEntry;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.PatientStatus;
 import ru.antenatal.domain.Severity;
@@ -17,6 +19,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +46,8 @@ public class ReminderService {
                 sendDiaryReminder(card, now, today);
                 sendMissedDiaryReminder(card, now, today);
                 sendWeeklySymptomReminder(card, now, today);
+                sendFetalMovementReminder(card, now, today);
+                sendPhReminder(card, now, today);
                 flagMissedDiary(card, now, today);
             }
         } catch (RuntimeException e) {
@@ -80,6 +85,46 @@ public class ReminderService {
         notificationService.notifyPatient(card,
                 "Дневник за сегодня не заполнен. Откройте приложение и внесите данные.",
                 "reminder:diary-missed:" + card.getId() + ":" + today);
+    }
+
+    private void sendFetalMovementReminder(PatientCard card, ZonedDateTime now, LocalDate today) {
+        if (now.getHour() != 19 || now.getMinute() != 0) {
+            return;
+        }
+        int week = GainCalculator.gestationalAge(card.getEdd(), today).weeks();
+        if (week < 26) {
+            return;
+        }
+        DiaryEntry entry = diaryEntryRepository
+                .findByPatientCardIdAndEntryDate(card.getId(), today)
+                .orElse(null);
+        if (entry != null && (entry.getFetalMovements() != null || entry.getKickStartedAt() != null)) {
+            return;
+        }
+        notificationService.notifyPatient(card,
+                "Проверьте шевеления плода. Можно отметить «Всё хорошо» или запустить счётчик на 2 часа.",
+                "fetal-movements-reminder:" + card.getId() + ":" + today);
+    }
+
+    private void sendPhReminder(PatientCard card, ZonedDateTime now, LocalDate today) {
+        if (now.getHour() != 9 || now.getMinute() != 0) {
+            return;
+        }
+        long daysPregnant = 280 - ChronoUnit.DAYS.between(today, card.getEdd());
+        if (daysPregnant < 84 || daysPregnant % 14 != 0) {
+            return;
+        }
+        boolean hasPh = diaryEntryRepository
+                .findByPatientCardIdAndEntryDateBetweenOrderByEntryDateAsc(
+                        card.getId(), today.minusDays(13), today)
+                .stream()
+                .anyMatch(entry -> entry.getVaginalPh() != null);
+        if (hasPh) {
+            return;
+        }
+        notificationService.notifyPatient(card,
+                "Пора проверить pH влагалища тест-полоской и внести результат в дневник.",
+                "ph-reminder:" + card.getId() + ":" + today);
     }
 
     private void sendWeeklySymptomReminder(PatientCard card, ZonedDateTime now, LocalDate today) {

@@ -80,6 +80,13 @@ public class DiaryEntry extends BaseEntity {
     @Column(length = 16)
     private Headache headache;
 
+    private Instant kickStartedAt;
+
+    private Instant kickEndedAt;
+
+    @Column(nullable = false)
+    private int kickCount = 0;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 

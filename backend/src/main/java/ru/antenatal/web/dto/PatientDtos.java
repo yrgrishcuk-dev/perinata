@@ -67,6 +67,10 @@ public final class PatientDtos {
             LegEdema legEdema,
             SleepQuality sleepQuality,
             Headache headache,
+            Instant kickStartedAt,
+            Instant kickEndedAt,
+            int kickCount,
+            Integer kickDurationSeconds,
             Instant updatedAt
     ) {
     }
