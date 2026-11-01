@@ -33,5 +33,8 @@ public class WeekContent extends BaseEntity {
     private String nutritionText;
 
     @Column(nullable = false, columnDefinition = "text")
+    private String recommendationsText;
+
+    @Column(nullable = false, columnDefinition = "text")
     private String warningText;
 }

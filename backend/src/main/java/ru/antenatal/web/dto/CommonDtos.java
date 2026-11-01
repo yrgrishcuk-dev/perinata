@@ -49,6 +49,7 @@ public final class CommonDtos {
             String title,
             String fetalText,
             String nutritionText,
+            String recommendationsText,
             String warningText
     ) {
     }
