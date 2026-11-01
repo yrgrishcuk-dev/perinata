@@ -14,6 +14,7 @@ import ru.antenatal.domain.DiabetesType;
 import ru.antenatal.domain.DiaryEntry;
 import ru.antenatal.domain.DischargeCharacter;
 import ru.antenatal.domain.FetalMovements;
+import ru.antenatal.domain.Headache;
 import ru.antenatal.domain.LegEdema;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.Severity;
@@ -86,6 +87,8 @@ public class DiaryService {
                 ? null
                 : request.painIntensity());
         entry.setLegEdema(request.legEdema());
+        entry.setSleepQuality(request.sleepQuality());
+        entry.setHeadache(request.headache());
         entry.setUpdatedAt(Instant.now());
         diaryEntryRepository.save(entry);
 
@@ -264,6 +267,26 @@ public class DiaryService {
                     Map.of("edema", "PRONOUNCED")));
         }
 
+        if (request.headache() == Headache.MODERATE || request.headache() == Headache.SEVERE) {
+            boolean highPressure = (request.sbp() != null && request.sbp() >= 140)
+                    || (request.dbp() != null && request.dbp() >= 90);
+            if (highPressure) {
+                alerts.add(new ObservationAlert(AlarmType.HEADACHE, Severity.CRITICAL,
+                        "Головная боль на фоне повышенного давления. Свяжитесь с врачом или позвоните 103/112.",
+                        Map.of("headache", request.headache().name(),
+                                "sbp", request.sbp() == null ? "" : String.valueOf(request.sbp()),
+                                "dbp", request.dbp() == null ? "" : String.valueOf(request.dbp()))));
+            } else if (request.headache() == Headache.SEVERE) {
+                alerts.add(new ObservationAlert(AlarmType.HEADACHE, Severity.CRITICAL,
+                        "Сильная головная боль. Свяжитесь с врачом или позвоните 103/112.",
+                        Map.of("headache", "SEVERE")));
+            } else {
+                alerts.add(new ObservationAlert(AlarmType.HEADACHE, Severity.WARNING,
+                        "Умеренная головная боль. Измерьте давление и обсудите это с врачом.",
+                        Map.of("headache", "MODERATE")));
+            }
+        }
+
         return alerts;
     }
 
@@ -298,6 +321,8 @@ public class DiaryService {
                 entry.getLowerAbdominalPain(),
                 entry.getPainIntensity(),
                 entry.getLegEdema(),
+                entry.getSleepQuality(),
+                entry.getHeadache(),
                 entry.getUpdatedAt());
     }
 

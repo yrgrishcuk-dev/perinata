@@ -18,7 +18,8 @@ export type AlarmType =
   | "VAGINAL_PH"
   | "FETAL_MOVEMENTS"
   | "ABDOMINAL_PAIN"
-  | "EDEMA";
+  | "EDEMA"
+  | "HEADACHE";
 export type GlucoseContext = "FASTING" | "POSTPRANDIAL";
 export type MessageDirection = "TO_PATIENT" | "TO_DOCTOR";
 export type AuthorType = "DOCTOR" | "PATIENT" | "SYSTEM";
@@ -77,6 +78,7 @@ export interface WeekContent {
   version: string;
   title: string;
   fetalText: string;
+  maternalText: string;
   nutritionText: string;
   recommendationsText: string;
   warningText: string;
@@ -105,6 +107,8 @@ export type DischargeAmount = "NORMAL" | "ABUNDANT";
 export type FetalMovements = "NORMAL" | "LESS" | "NONE" | "NOT_TRACKED";
 export type AbdominalPain = "NONE" | "PULLING" | "CRAMPING" | "SHARP" | "OTHER";
 export type LegEdema = "NONE" | "MILD" | "PRONOUNCED" | "ASYMMETRIC";
+export type SleepQuality = "GOOD" | "NORMAL" | "RESTLESS" | "POOR";
+export type Headache = "NONE" | "MILD" | "MODERATE" | "SEVERE";
 
 export interface DiaryView {
   id: number;
@@ -124,6 +128,8 @@ export interface DiaryView {
   lowerAbdominalPain: AbdominalPain | null;
   painIntensity: number | null;
   legEdema: LegEdema | null;
+  sleepQuality: SleepQuality | null;
+  headache: Headache | null;
   updatedAt: string;
 }
 

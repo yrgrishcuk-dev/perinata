@@ -77,6 +77,12 @@ export default function WeekPage() {
             <p style={{ lineHeight: 1.6 }}>{bundle.content.fetalText}</p>
           </div>
           <div className="card">
+            <h2>Что происходит с вами</h2>
+            <p className="muted" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              {bundle.content.maternalText}
+            </p>
+          </div>
+          <div className="card">
             <h2>Питание на этой неделе</h2>
             <p className="muted" style={{ marginTop: 8, lineHeight: 1.6 }}>
               {bundle.content.nutritionText}

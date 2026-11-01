@@ -104,8 +104,7 @@ export default function SymptomsPage() {
             ))}
           </ul>
           <p className="muted" style={{ marginTop: 12 }}>
-            Врач получил уведомление. Не оставайтесь дома одна. Возьмите документы и позвоните в
-            приёмное отделение.
+            Врач получил уведомление. Не оставайтесь дома одна. Возьмите документы.
           </p>
         </div>
         <a className="btn btn-danger btn-block btn-lg" href="tel:103">

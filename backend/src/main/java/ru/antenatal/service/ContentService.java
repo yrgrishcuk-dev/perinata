@@ -52,6 +52,7 @@ public class ContentService {
                 content.getVersion(),
                 content.getTitle(),
                 content.getFetalText(),
+                content.getMaternalText(),
                 content.getNutritionText(),
                 content.getRecommendationsText(),
                 content.getWarningText());

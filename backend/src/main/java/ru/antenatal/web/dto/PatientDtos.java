@@ -8,8 +8,10 @@ import ru.antenatal.domain.DischargeAmount;
 import ru.antenatal.domain.DischargeCharacter;
 import ru.antenatal.domain.FetalMovements;
 import ru.antenatal.domain.GlucoseContext;
+import ru.antenatal.domain.Headache;
 import ru.antenatal.domain.LegEdema;
 import ru.antenatal.domain.Severity;
+import ru.antenatal.domain.SleepQuality;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -63,6 +65,8 @@ public final class PatientDtos {
             AbdominalPain lowerAbdominalPain,
             Integer painIntensity,
             LegEdema legEdema,
+            SleepQuality sleepQuality,
+            Headache headache,
             Instant updatedAt
     ) {
     }
@@ -83,7 +87,9 @@ public final class PatientDtos {
             FetalMovements fetalMovements,
             AbdominalPain lowerAbdominalPain,
             Integer painIntensity,
-            LegEdema legEdema
+            LegEdema legEdema,
+            SleepQuality sleepQuality,
+            Headache headache
     ) {
     }
 
