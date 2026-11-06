@@ -314,6 +314,13 @@ export interface MessengerLinkResponse {
   linked: boolean;
 }
 
+export type MessengerPlatform = "TELEGRAM" | "MAX";
+
+export interface MessengerStatus {
+  linked: boolean;
+  platform: MessengerPlatform | null;
+}
+
 export interface AuditLog {
   id: number;
   actorType: string;
@@ -330,7 +337,10 @@ export interface PatientCreateInput {
   fullName: string;
   ageYears: number;
   parity?: number | null;
-  edd: string;
+  edd?: string | null;
+  eddMethod?: "LMP" | "MANUAL";
+  eddBasisDate?: string | null;
+  eddCycleLength?: number | null;
   heightCm?: number | null;
   prePregnancyWeightKg?: number | null;
   riskGroup?: RiskGroup;

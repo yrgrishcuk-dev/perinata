@@ -145,6 +145,40 @@ textarea {
   justify-content: space-between;
 }
 
+.edd-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.edd-row input[type="date"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 190px;
+}
+
+.edd-row .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.edd-calc {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 520px) {
+  .edd-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .edd-row input[type="date"] {
+    max-width: none;
+  }
+}
+
 .grid {
   display: grid;
   gap: 12px;
@@ -813,6 +847,89 @@ th {
   flex: 1;
 }
 
+.calendar-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.filter-chip:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.filter-chip.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.filter-chip:not(.active) {
+  opacity: 0.6;
+}
+
+.filter-chip:not(.active) .legend-dot {
+  background: #c4c9d2;
+}
+
+.calendar-selected-label {
+  margin-left: auto;
+}
+
+.calendar-day-quick-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.calendar-day-quick-add:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.calendar-day:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+@media (max-width: 900px) {
+  .calendar-filters {
+    margin-bottom: 10px;
+  }
+
+  .calendar-selected-label {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 .calendar-scroll {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -1003,6 +1120,18 @@ th {
 
 .legend-dot.past {
   background: #98a2b3;
+}
+
+.legend-dot.appointment {
+  background: var(--primary);
+}
+
+.legend-dot.event {
+  background: var(--ok);
+}
+
+.legend-dot.edd {
+  background: var(--danger);
 }
 
 .legend-risk {

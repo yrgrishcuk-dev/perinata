@@ -5,7 +5,7 @@ import { Counter } from "../components/Counter";
 import { request } from "../api";
 import { formatDate } from "../format";
 import { useStaff } from "../session";
-import type { DiabetesType, PatientCreateInput, PatientSummary, RiskGroup } from "../types";
+import type { DiabetesType, EddPreview, PatientCreateInput, PatientSummary, RiskGroup } from "../types";
 
 function defaultEdd(): string {
   const date = new Date();
@@ -19,6 +19,9 @@ interface FormState {
   ageYears: string;
   parity: string;
   edd: string;
+  eddMethod: "LMP" | "MANUAL";
+  eddBasisDate: string;
+  eddCycleLength: string;
   heightCm: string;
   prePregnancyWeightKg: string;
   riskGroup: RiskGroup;
@@ -32,6 +35,9 @@ const emptyForm = (): FormState => ({
   ageYears: "28",
   parity: "1",
   edd: defaultEdd(),
+  eddMethod: "MANUAL",
+  eddBasisDate: "",
+  eddCycleLength: "28",
   heightCm: "",
   prePregnancyWeightKg: "",
   riskGroup: "LOW",
@@ -51,6 +57,12 @@ export default function PatientsPage() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [eddCalcOpen, setEddCalcOpen] = useState(false);
+  const [eddLmp, setEddLmp] = useState("");
+  const [eddCycle, setEddCycle] = useState("28");
+  const [eddPreview, setEddPreview] = useState<EddPreview | null>(null);
+  const [eddCalcBusy, setEddCalcBusy] = useState(false);
+  const [eddCalcError, setEddCalcError] = useState<string | null>(null);
 
   const load = async () => {
     if (!token) {
@@ -92,6 +104,63 @@ export default function PatientsPage() {
     return <ErrorBox message={error} onRetry={() => void load()} />;
   }
 
+  const openEddCalc = () => {
+    setEddLmp(form.eddMethod === "LMP" ? form.eddBasisDate : "");
+    setEddCycle(form.eddCycleLength || "28");
+    setEddPreview(null);
+    setEddCalcError(null);
+    setEddCalcOpen(true);
+  };
+
+  const closeEddCalc = () => {
+    setEddCalcOpen(false);
+    setEddPreview(null);
+    setEddCalcError(null);
+  };
+
+  const calculateEdd = async () => {
+    if (!token) {
+      return;
+    }
+    if (!eddLmp) {
+      setEddCalcError("Укажите первый день последней менструации");
+      return;
+    }
+    setEddCalcBusy(true);
+    setEddCalcError(null);
+    try {
+      const preview = await request<EddPreview>("/api/doctor/edd/preview", {
+        method: "POST",
+        body: { lmpDate: eddLmp, cycleLength: Number(eddCycle || "28") },
+        token
+      });
+      setEddPreview(preview);
+    } catch (e) {
+      setEddCalcError(e instanceof Error ? e.message : "Не удалось рассчитать ПДР");
+    } finally {
+      setEddCalcBusy(false);
+    }
+  };
+
+  const applyEddPreview = () => {
+    if (!eddPreview) {
+      return;
+    }
+    setForm({
+      ...form,
+      edd: eddPreview.edd,
+      eddMethod: "LMP",
+      eddBasisDate: eddLmp,
+      eddCycleLength: eddCycle
+    });
+    closeEddCalc();
+  };
+
+  const closeCreate = () => {
+    closeEddCalc();
+    setShowCreate(false);
+  };
+
   const submit = async () => {
     if (!token) {
       return;
@@ -104,6 +173,9 @@ export default function PatientsPage() {
         ageYears: Number(form.ageYears),
         parity: Number(form.parity || "1"),
         edd: form.edd,
+        eddMethod: form.eddMethod,
+        eddBasisDate: form.eddMethod === "LMP" ? form.eddBasisDate || null : null,
+        eddCycleLength: form.eddMethod === "LMP" ? Number(form.eddCycleLength || "28") : null,
         heightCm: form.heightCm ? Number(form.heightCm.replace(",", ".")) : null,
         prePregnancyWeightKg: form.prePregnancyWeightKg
           ? Number(form.prePregnancyWeightKg.replace(",", "."))
@@ -118,7 +190,7 @@ export default function PatientsPage() {
         body,
         token
       });
-      setShowCreate(false);
+      closeCreate();
       setForm(emptyForm());
       navigate(`/cabinet/patients/${created.id}`);
     } catch (e) {
@@ -254,7 +326,7 @@ export default function PatientsPage() {
       </div>
 
       {showCreate ? (
-        <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
+        <div className="modal-backdrop" onClick={closeCreate}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h2 style={{ marginBottom: 14 }}>Новая карточка</h2>
             <Field label="ФИО" hint="Эти данные отобразятся у пациентки в карточке.">
@@ -278,12 +350,34 @@ export default function PatientsPage() {
                   onChange={(parity) => setForm({ ...form, parity })}
                 />
               </Field>
-              <Field label="ПДР">
-                <input
-                  type="date"
-                  value={form.edd}
-                  onChange={(event) => setForm({ ...form, edd: event.target.value })}
-                />
+              <Field
+                label="ПДР"
+                hint={
+                  form.eddMethod === "LMP" && form.eddBasisDate
+                    ? `По менструации от ${formatDate(form.eddBasisDate)}, цикл ${
+                        form.eddCycleLength || "28"
+                      } дн.`
+                    : "ПДР указан вручную"
+                }
+              >
+                <div className="edd-row">
+                  <input
+                    type="date"
+                    value={form.edd}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        edd: event.target.value,
+                        eddMethod: "MANUAL",
+                        eddBasisDate: "",
+                        eddCycleLength: "28"
+                      })
+                    }
+                  />
+                  <button type="button" className="btn btn-sm" onClick={openEddCalc}>
+                    Рассчитать
+                  </button>
+                </div>
               </Field>
               <Field label="Рост, см (если известен)" hint="Заполняется только врачом.">
                 <input
@@ -343,6 +437,62 @@ export default function PatientsPage() {
                 </select>
               </Field>
             </div>
+            {eddCalcOpen ? (
+              <div className="card edd-calc">
+                <div className="row between mb">
+                  <b>Расчёт ПДР по менструации</b>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={closeEddCalc}>
+                    Закрыть
+                  </button>
+                </div>
+                <div className="grid two">
+                  <Field label="Первый день последней менструации">
+                    <input
+                      type="date"
+                      value={eddLmp}
+                      onChange={(event) => {
+                        setEddLmp(event.target.value);
+                        setEddPreview(null);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Длина цикла, дней" hint="От 21 до 35. По умолчанию 28.">
+                    <input
+                      inputMode="numeric"
+                      value={eddCycle}
+                      onChange={(event) => {
+                        setEddCycle(event.target.value);
+                        setEddPreview(null);
+                      }}
+                    />
+                  </Field>
+                </div>
+                {eddCalcError ? <ErrorBox message={eddCalcError} /> : null}
+                {eddPreview ? (
+                  <p className="notice">
+                    ПДР: <b>{formatDate(eddPreview.edd)}</b>, срок {eddPreview.gestationalWeek} нед.
+                  </p>
+                ) : null}
+                <div className="row">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={eddCalcBusy || !eddLmp}
+                    onClick={() => void calculateEdd()}
+                  >
+                    {eddCalcBusy ? "Считаем…" : "Рассчитать"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={!eddPreview}
+                    onClick={applyEddPreview}
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <Field label="Комментарий врача" hint="Виден только врачу.">
               <textarea
                 value={form.comment}
@@ -360,7 +510,7 @@ export default function PatientsPage() {
               <button className="btn btn-primary" disabled={saving} onClick={() => void submit()}>
                 {saving ? "Создаём…" : "Создать карточку"}
               </button>
-              <button className="btn btn-ghost" onClick={() => setShowCreate(false)}>
+              <button className="btn btn-ghost" onClick={closeCreate}>
                 Отмена
               </button>
             </div>

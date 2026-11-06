@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ErrorBox, Field, RiskBadge, Spinner } from "../components/ui";
 import { ActionMenu } from "../components/ActionMenu";
@@ -137,6 +137,11 @@ export default function CalendarPage() {
   const [savingAppointment, setSavingAppointment] = useState(false);
   const [appointmentFormError, setAppointmentFormError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState({
+    appointments: true,
+    events: true,
+    edd: true
+  });
 
   const load = useCallback(async () => {
     if (!token) {
@@ -246,26 +251,36 @@ export default function CalendarPage() {
 
   const eddFor = useCallback(
     (day: Date) =>
-      sortPatients(entries.filter((entry) => isSameDay(entry.edd, day))),
-    [entries]
+      filters.edd
+        ? sortPatients(entries.filter((entry) => isSameDay(entry.edd, day)))
+        : [],
+    [entries, filters.edd]
   );
 
   const calendarEventsFor = useCallback(
-    (day: Date) => calendarEvents.filter((event) => event.date === toIsoDate(day)),
-    [calendarEvents]
+    (day: Date) =>
+      filters.events
+        ? calendarEvents.filter((event) => event.date === toIsoDate(day))
+        : [],
+    [calendarEvents, filters.events]
   );
 
   const appointmentsFor = useCallback(
-    (day: Date) => appointments.filter((item) => item.date === toIsoDate(day)),
-    [appointments]
+    (day: Date) =>
+      filters.appointments
+        ? appointments.filter((item) => item.date === toIsoDate(day))
+        : [],
+    [appointments, filters.appointments]
   );
 
   const windowFor = useCallback(
     (day: Date) =>
-      sortPatients(
-        entries.filter((entry) => Math.abs(daysBetween(day, entry.edd)) <= 1)
-      ),
-    [entries]
+      filters.edd
+        ? sortPatients(
+            entries.filter((entry) => Math.abs(daysBetween(day, entry.edd)) <= 1)
+          )
+        : [],
+    [entries, filters.edd]
   );
 
   const selectedWindow = useMemo(() => windowFor(selectedDate), [windowFor, selectedDate]);
@@ -300,13 +315,16 @@ export default function CalendarPage() {
   );
 
   const upcoming = useMemo(() => {
+    if (!filters.edd) {
+      return [];
+    }
     return [...entries]
       .filter((entry) => {
         const days = daysBetween(today, entry.edd);
         return days >= -1 && days <= 14;
       })
       .sort((a, b) => a.edd.getTime() - b.edd.getTime());
-  }, [entries, today]);
+  }, [entries, today, filters.edd]);
 
   const changeMonth = (delta: number) => {
     const next = new Date(month.getFullYear(), month.getMonth() + delta, 1, 12, 0, 0, 0);
@@ -419,6 +437,75 @@ export default function CalendarPage() {
       place: "",
       comment: ""
     });
+  };
+
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const sideRef = useRef<HTMLDivElement | null>(null);
+
+  const focusDay = (date: Date) => {
+    const element = gridRef.current?.querySelector<HTMLElement>(
+      `[data-date="${toIsoDate(date)}"]`
+    );
+    if (element) {
+      element.focus();
+      setSelectedDate(date);
+      scrollToSide();
+    }
+  };
+
+  const scrollToSide = () => {
+    if (typeof window === "undefined" || window.innerWidth > 900) {
+      return;
+    }
+    window.setTimeout(() => {
+      sideRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  };
+
+  const handleGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+      return;
+    }
+    const dayElement = target.closest<HTMLElement>("[data-date]");
+    const currentDate = dayElement?.dataset.date
+      ? parseIsoDate(dayElement.dataset.date)
+      : null;
+    const base = currentDate ?? selectedDate;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        focusDay(addDays(base, -1));
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        focusDay(addDays(base, 1));
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        focusDay(addDays(base, -7));
+        break;
+      case "ArrowDown":
+        event.preventDefault();
+        focusDay(addDays(base, 7));
+        break;
+      case "Enter":
+        if (dayElement && currentDate) {
+          event.preventDefault();
+          setSelectedDate(currentDate);
+          scrollToSide();
+        }
+        break;
+      case "n":
+      case "N":
+        event.preventDefault();
+        openNewAppointment(selectedDate);
+        break;
+      default:
+        break;
+    }
   };
 
   const openEditAppointment = (appointment: AppointmentView) => {
@@ -595,6 +682,38 @@ export default function CalendarPage() {
 
       <div className="calendar-layout">
         <div className="card calendar-card">
+          <div className="calendar-filters" role="group" aria-label="Фильтры календаря">
+            <button
+              type="button"
+              className={`filter-chip ${filters.appointments ? "active" : ""}`}
+              aria-pressed={filters.appointments}
+              onClick={() => setFilters((prev) => ({ ...prev, appointments: !prev.appointments }))}
+            >
+              <i className="legend-dot appointment" />
+              Приёмы
+            </button>
+            <button
+              type="button"
+              className={`filter-chip ${filters.events ? "active" : ""}`}
+              aria-pressed={filters.events}
+              onClick={() => setFilters((prev) => ({ ...prev, events: !prev.events }))}
+            >
+              <i className="legend-dot event" />
+              События
+            </button>
+            <button
+              type="button"
+              className={`filter-chip ${filters.edd ? "active" : ""}`}
+              aria-pressed={filters.edd}
+              onClick={() => setFilters((prev) => ({ ...prev, edd: !prev.edd }))}
+            >
+              <i className="legend-dot edd" />
+              ПДР
+            </button>
+            <span className="muted small calendar-selected-label">
+              Выбрано: {formatDate(toIsoDate(selectedDate))}
+            </span>
+          </div>
           <div className="row between calendar-toolbar">
             <button
               className="btn btn-sm"
@@ -631,8 +750,9 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            <div className="calendar-grid">
+            <div className="calendar-grid" ref={gridRef} onKeyDown={handleGridKeyDown}>
               {monthDays.map((day) => {
+                const dayIso = toIsoDate(day);
                 const dayEdd = eddFor(day);
                 const dayCalendarEvents = calendarEventsFor(day);
                 const dayAppointments = appointmentsFor(day);
@@ -654,12 +774,26 @@ export default function CalendarPage() {
 
                 return (
                   <div
-                    key={toIsoDate(day)}
+                    key={dayIso}
+                    data-date={dayIso}
                     className={classes}
                     role="button"
                     tabIndex={0}
-                    title={holiday ?? undefined}
-                    onClick={() => setSelectedDate(day)}
+                    title={
+                      holiday
+                        ? `${holiday}. Клик — выбрать день, двойной клик — записать на приём`
+                        : "Клик — выбрать день, двойной клик — записать на приём"
+                    }
+                    aria-current={isSameDay(day, today) ? "date" : undefined}
+                    aria-label={`${formatDayTitle(day)}, приёмов: ${dayAppointments.length}, ПДР: ${dayEdd.length}, событий: ${dayCalendarEvents.length}`}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      scrollToSide();
+                    }}
+                    onDoubleClick={(event) => {
+                      event.preventDefault();
+                      openNewAppointment(day);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
@@ -670,6 +804,20 @@ export default function CalendarPage() {
                     <div className="calendar-day-head">
                       <span>{day.getDate()}</span>
                       {holiday ? <span className="calendar-holiday-dot" /> : null}
+                      {isSameDay(day, selectedDate) ? (
+                        <button
+                          type="button"
+                          className="calendar-day-quick-add"
+                          aria-label={`Записать на приём ${formatDayTitle(day)}`}
+                          title="Записать на приём"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openNewAppointment(day);
+                          }}
+                        >
+                          +
+                        </button>
+                      ) : null}
                     </div>
                     <div className="calendar-events">
                       {dayEdd.slice(0, 2).map((entry) => {
@@ -775,7 +923,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <aside className="calendar-side">
+        <aside className="calendar-side" ref={sideRef}>
           <div className="card">
             <div className="row between">
               <h2>Приёмы</h2>

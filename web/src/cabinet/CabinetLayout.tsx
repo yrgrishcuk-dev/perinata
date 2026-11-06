@@ -1,22 +1,56 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ErrorBox, Spinner } from "../components/ui";
 import { request } from "../api";
 import { useStaff } from "../session";
-import type { MessengerLinkResponse } from "../types";
+import type { MessengerLinkResponse, MessengerPlatform, MessengerStatus } from "../types";
+
+const PLATFORM_LABEL: Record<MessengerPlatform, string> = {
+  TELEGRAM: "Telegram",
+  MAX: "MAX"
+};
 
 export default function CabinetLayout() {
   const { me, loading, logout, token } = useStaff();
   const navigate = useNavigate();
   const location = useLocation();
   const [messenger, setMessenger] = useState<MessengerLinkResponse | null>(null);
-  const [messengerPlatform, setMessengerPlatform] = useState<"TELEGRAM" | "MAX">("TELEGRAM");
+  const [messengerPlatform, setMessengerPlatform] = useState<MessengerPlatform>("TELEGRAM");
+  const [status, setStatus] = useState<MessengerStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  const loadStatus = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+    try {
+      const data = await request<MessengerStatus>("/api/doctor/messenger", { token });
+      setStatus(data);
+    } catch {
+      // статус не критичен для работы кабинета
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    const onFocus = () => {
+      void loadStatus();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [token, loadStatus]);
 
   if (loading) {
     return (
@@ -29,11 +63,12 @@ export default function CabinetLayout() {
     return <Navigate to="/cabinet/login" replace />;
   }
 
-  const connectMessenger = async (platform: "TELEGRAM" | "MAX") => {
+  const connectMessenger = async (platform: MessengerPlatform) => {
     if (!token) {
       return;
     }
     setMessengerPlatform(platform);
+    setBusy(true);
     try {
       const data = await request<MessengerLinkResponse>(
         `/api/doctor/messenger-link?platform=${platform}`,
@@ -43,8 +78,55 @@ export default function CabinetLayout() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось создать ссылку");
+    } finally {
+      setBusy(false);
     }
   };
+
+  const unlinkMessenger = async () => {
+    if (!token || !status?.linked) {
+      return;
+    }
+    const label = status.platform ? PLATFORM_LABEL[status.platform] : "мессенджера";
+    const confirmed = window.confirm(
+      `Отвязать уведомления от ${label}? После этого можно подключить другой мессенджер.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await request<MessengerStatus>("/api/doctor/messenger", {
+        method: "DELETE",
+        token
+      });
+      setStatus(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось отвязать мессенджер");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const closeMessenger = () => {
+    setMessenger(null);
+    void loadStatus();
+  };
+
+  const linked = status?.linked === true;
+  const linkedLabel = status?.platform ? PLATFORM_LABEL[status.platform] : null;
+
+  const connectButtons = (
+    <>
+      <button className="btn btn-sm" disabled={busy} onClick={() => void connectMessenger("TELEGRAM")}>
+        Подключить Telegram
+      </button>
+      <button className="btn btn-sm" disabled={busy} onClick={() => void connectMessenger("MAX")}>
+        Подключить MAX
+      </button>
+    </>
+  );
 
   return (
     <div className="cabinet">
@@ -103,16 +185,20 @@ export default function CabinetLayout() {
               <span className="header-email"> · {me.email}</span>
             </div>
           </div>
-          <div className="row">
+          <div className="row messenger-actions">
             <span className={`badge ${me.role === "ADMIN" ? "warn" : "neutral"}`}>
               {me.role === "ADMIN" ? "Админ" : "Врач"}
             </span>
-            <button className="btn btn-sm" onClick={() => void connectMessenger("TELEGRAM")}>
-              Telegram
-            </button>
-            <button className="btn btn-sm" onClick={() => void connectMessenger("MAX")}>
-              MAX
-            </button>
+            {linked ? (
+              <>
+                <span className="badge neutral">Уведомления: {linkedLabel}</span>
+                <button className="btn btn-sm" disabled={busy} onClick={() => void unlinkMessenger()}>
+                  Отвязать
+                </button>
+              </>
+            ) : (
+              connectButtons
+            )}
           </div>
         </header>
 
@@ -170,24 +256,41 @@ export default function CabinetLayout() {
                   Аудит
                 </Link>
               ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  void connectMessenger("TELEGRAM");
-                }}
-              >
-                Уведомления в Telegram
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  void connectMessenger("MAX");
-                }}
-              >
-                Уведомления в MAX
-              </button>
+              {linked ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    void unlinkMessenger();
+                  }}
+                >
+                  Отвязать уведомления ({linkedLabel})
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setMoreOpen(false);
+                      void connectMessenger("TELEGRAM");
+                    }}
+                  >
+                    Подключить Telegram
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setMoreOpen(false);
+                      void connectMessenger("MAX");
+                    }}
+                  >
+                    Подключить MAX
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="danger"
@@ -205,12 +308,12 @@ export default function CabinetLayout() {
       ) : null}
 
       {messenger ? (
-        <div className="modal-backdrop" onClick={() => setMessenger(null)}>
+        <div className="modal-backdrop" onClick={closeMessenger}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h2>Уведомления в {messengerPlatform === "MAX" ? "MAX" : "Telegram"}</h2>
+            <h2>Уведомления в {PLATFORM_LABEL[messengerPlatform]}</h2>
             <p className="muted mt">
               {messenger.linked
-                ? "Уведомления уже подключены. Новая ссылка заменит текущую привязку."
+                ? "Уведомления уже подключены. Новая ссылка заменит текущую привязку после подтверждения в боте."
                 : "Откройте ссылку на телефоне и нажмите Start в боте."}
             </p>
             <div className="card tight mt" style={{ marginBottom: 0 }}>
@@ -220,7 +323,7 @@ export default function CabinetLayout() {
             </div>
             <div className="row mt">
               <a className="btn btn-primary" href={messenger.url} target="_blank" rel="noreferrer">
-                Открыть {messengerPlatform === "MAX" ? "MAX" : "Telegram"}
+                Открыть {PLATFORM_LABEL[messengerPlatform]}
               </a>
               <button
                 className="btn"
@@ -228,7 +331,7 @@ export default function CabinetLayout() {
               >
                 Скопировать
               </button>
-              <button className="btn btn-ghost" onClick={() => setMessenger(null)}>
+              <button className="btn btn-ghost" onClick={closeMessenger}>
                 Закрыть
               </button>
             </div>

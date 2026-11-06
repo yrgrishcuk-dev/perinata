@@ -49,6 +49,7 @@ import ru.antenatal.web.dto.DoctorDtos.AlertActionRequest;
 import ru.antenatal.web.dto.DoctorDtos.CloseRequest;
 import ru.antenatal.web.dto.DoctorDtos.DashboardView;
 import ru.antenatal.web.dto.DoctorDtos.DoctorMessengerResponse;
+import ru.antenatal.web.dto.DoctorDtos.DoctorMessengerStatus;
 import ru.antenatal.web.dto.DoctorDtos.LinkResponse;
 import ru.antenatal.web.dto.DoctorDtos.PatientCreateRequest;
 import ru.antenatal.web.dto.DoctorDtos.PatientDetails;
@@ -109,6 +110,11 @@ public class DoctorController {
                                   @PathVariable Long id) {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
         return patientCardService.details(doctor, id);
+    }
+
+    @PostMapping("/edd/preview")
+    public EddPreview previewEdd(@Valid @RequestBody EddCalcRequest request) {
+        return eddService.preview(request);
     }
 
     @PostMapping("/patients/{id}/edd/preview")
@@ -254,6 +260,18 @@ public class DoctorController {
                                 @RequestBody(required = false) AlertActionRequest request) {
         Doctor doctor = doctorAccessService.requireDoctor(principal);
         return alertService.close(doctor, id, request == null ? null : request.comment());
+    }
+
+    @GetMapping("/messenger")
+    public DoctorMessengerStatus messengerStatus(@AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return linkService.doctorMessengerStatus(doctor);
+    }
+
+    @DeleteMapping("/messenger")
+    public DoctorMessengerStatus unlinkMessenger(@AuthenticationPrincipal CurrentPrincipal principal) {
+        Doctor doctor = doctorAccessService.requireDoctor(principal);
+        return linkService.unlinkDoctorMessenger(doctor);
     }
 
     @PostMapping("/messenger-link")

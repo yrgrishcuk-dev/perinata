@@ -35,6 +35,11 @@ public class EddService {
         return calculate(request);
     }
 
+    @Transactional(readOnly = true)
+    public EddPreview preview(EddCalcRequest request) {
+        return calculate(request);
+    }
+
     @Transactional
     public PatientDetails apply(Doctor doctor, Long patientId, EddCalcRequest request) {
         PatientCard card = doctorAccessService.requirePatient(doctor, patientId);

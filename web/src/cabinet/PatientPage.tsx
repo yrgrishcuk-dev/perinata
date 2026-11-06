@@ -793,26 +793,26 @@ export default function PatientPage() {
                   onChange={(parity) => setSettings({ ...settings, parity })}
                 />
               </Field>
-              <Field label="ПДР">
-                <input
-                  type="date"
-                  value={settings.edd}
-                  onChange={(event) => setSettings({ ...settings, edd: event.target.value })}
-                />
-                <button
-                  className="btn btn-sm mt"
-                  type="button"
-                  onClick={openEdd}
-                >
-                  Рассчитать по менструации
-                </button>
-                <span className="notice">
-                  {details.eddMethod === "LMP" && details.eddBasisDate
+              <Field
+                label="ПДР"
+                hint={
+                  details.eddMethod === "LMP" && details.eddBasisDate
                     ? `По менструации от ${formatDate(details.eddBasisDate)}, цикл ${
                         details.eddCycleLength ?? 28
                       } дн.`
-                    : "ПДР указан вручную"}
-                </span>
+                    : "ПДР указан вручную"
+                }
+              >
+                <div className="row">
+                  <input
+                    type="date"
+                    value={settings.edd}
+                    onChange={(event) => setSettings({ ...settings, edd: event.target.value })}
+                  />
+                  <button className="btn btn-sm" type="button" onClick={openEdd}>
+                    Рассчитать
+                  </button>
+                </div>
               </Field>
               <Field label="Напоминание о дневнике">
                 <input

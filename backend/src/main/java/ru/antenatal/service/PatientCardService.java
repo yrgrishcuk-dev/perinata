@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.antenatal.calc.BmiCalculator;
+import ru.antenatal.calc.EddCalculator;
 import ru.antenatal.calc.GainCalculator;
 import ru.antenatal.common.ApiException;
 import ru.antenatal.common.TokenUtil;
@@ -12,6 +13,7 @@ import ru.antenatal.domain.AlarmStatus;
 import ru.antenatal.domain.BmiCategory;
 import ru.antenatal.domain.DiabetesType;
 import ru.antenatal.domain.Doctor;
+import ru.antenatal.domain.EddMethod;
 import ru.antenatal.domain.PatientAccount;
 import ru.antenatal.domain.PatientCard;
 import ru.antenatal.domain.NotificationRecipientType;
@@ -68,7 +70,6 @@ public class PatientCardService {
 
     @Transactional
     public PatientSummary create(Doctor doctor, PatientCreateRequest request) {
-        validateEdd(request.edd());
         PatientCard card = new PatientCard();
         card.setClinicId(doctor.getClinicId());
         card.setDoctorId(doctor.getId());
@@ -76,7 +77,7 @@ public class PatientCardService {
         card.setFullName(request.fullName().trim());
         card.setAgeYears(request.ageYears());
         card.setParity(request.parity());
-        card.setEdd(request.edd());
+        applyEdd(card, request);
         card.setHeightCm(request.heightCm());
         card.setPrePregnancyWeightKg(request.prePregnancyWeightKg());
         recalculateBmi(card);
@@ -359,6 +360,37 @@ public class PatientCardService {
         if (edd.isBefore(today.minusDays(30)) || edd.isAfter(today.plusDays(300))) {
             throw ApiException.badRequest("ПДР вне допустимого диапазона");
         }
+    }
+
+    private void applyEdd(PatientCard card, PatientCreateRequest request) {
+        EddMethod method = request.eddMethod() == null ? EddMethod.MANUAL : request.eddMethod();
+        LocalDate edd;
+        if (method == EddMethod.LMP) {
+            if (request.eddBasisDate() == null) {
+                throw ApiException.badRequest(
+                        "Для расчёта ПДР по менструации укажите дату последней менструации");
+            }
+            int cycleLength = request.eddCycleLength() == null ? 28 : request.eddCycleLength();
+            if (cycleLength < 21 || cycleLength > 35) {
+                throw ApiException.badRequest("Длина цикла должна быть от 21 до 35 дней");
+            }
+            edd = EddCalculator.byLmp(request.eddBasisDate(), cycleLength);
+            card.setEddMethod(EddMethod.LMP);
+            card.setEddBasisDate(request.eddBasisDate());
+            card.setEddCycleLength(cycleLength);
+            card.setEddCalculatedAt(Instant.now());
+        } else {
+            if (request.edd() == null) {
+                throw ApiException.badRequest("Укажите ПДР или данные для расчёта");
+            }
+            edd = request.edd();
+            card.setEddMethod(EddMethod.MANUAL);
+            card.setEddBasisDate(null);
+            card.setEddCycleLength(null);
+            card.setEddCalculatedAt(null);
+        }
+        validateEdd(edd);
+        card.setEdd(edd);
     }
 
     private String uniquePublicCode() {
