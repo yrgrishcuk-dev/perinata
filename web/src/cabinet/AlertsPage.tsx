@@ -72,24 +72,26 @@ export default function AlertsPage() {
 
   return (
     <>
-      <div className="page-head row between mb">
-        <h1 style={{ fontSize: 24 }}>События</h1>
-        <button className="btn" onClick={() => void load()}>
-          Обновить
-        </button>
-      </div>
-
-      <div className="tabs">
-        {filters.map(([value, label]) => (
-          <button
-            key={label}
-            className={status === value ? "active" : ""}
-            onClick={() => setStatus(value)}
-            type="button"
-          >
-            {label}
+      <div className="page-sticky">
+        <div className="page-head row between mb">
+          <h1 style={{ fontSize: 24 }}>События</h1>
+          <button className="btn" onClick={() => void load()}>
+            Обновить
           </button>
-        ))}
+        </div>
+
+        <div className="tabs">
+          {filters.map(([value, label]) => (
+            <button
+              key={label}
+              className={status === value ? "active" : ""}
+              onClick={() => setStatus(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {notice ? <div className="alert ok">{notice}</div> : null}
