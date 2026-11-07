@@ -21,6 +21,7 @@ import ru.antenatal.repo.LinkTokenRepository;
 import ru.antenatal.repo.PatientAccountRepository;
 import ru.antenatal.repo.PatientCardRepository;
 import ru.antenatal.web.dto.DoctorDtos.DoctorMessengerResponse;
+import ru.antenatal.web.dto.DoctorDtos.DoctorMessengerStatus;
 import ru.antenatal.web.dto.DoctorDtos.LinkResponse;
 import ru.antenatal.web.dto.PatientDtos.InvitePreviewResponse;
 
@@ -109,6 +110,26 @@ public class LinkService {
                 .findByDoctorIdAndRevokedAtIsNull(doctor.getId()).isPresent();
         String url = baseUrl + username + "?start=dr_" + raw;
         return new DoctorMessengerResponse(url, linked);
+    }
+
+    @Transactional(readOnly = true)
+    public DoctorMessengerStatus doctorMessengerStatus(Doctor doctor) {
+        return doctorMessengerRepository.findByDoctorIdAndRevokedAtIsNull(doctor.getId())
+                .map(messenger -> new DoctorMessengerStatus(true, messenger.getPlatform()))
+                .orElseGet(() -> new DoctorMessengerStatus(false, null));
+    }
+
+    @Transactional
+    public DoctorMessengerStatus unlinkDoctorMessenger(Doctor doctor) {
+        doctorMessengerRepository.findByDoctorIdAndRevokedAtIsNull(doctor.getId())
+                .ifPresent(messenger -> {
+                    messenger.setRevokedAt(Instant.now());
+                    doctorMessengerRepository.save(messenger);
+                    auditService.log(doctor.getRole().name(), String.valueOf(doctor.getId()),
+                            "DOCTOR_MESSENGER_UNLINK", "DOCTOR", String.valueOf(doctor.getId()),
+                            "platform=" + messenger.getPlatform());
+                });
+        return new DoctorMessengerStatus(false, null);
     }
 
     @Transactional(readOnly = true)

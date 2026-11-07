@@ -12,6 +12,7 @@ import ru.antenatal.domain.BmiCategory;
 import ru.antenatal.domain.DiabetesType;
 import ru.antenatal.domain.EddMethod;
 import ru.antenatal.domain.PatientStatus;
+import ru.antenatal.domain.Platform;
 import ru.antenatal.domain.RiskGroup;
 
 import java.math.BigDecimal;
@@ -29,14 +30,17 @@ public final class DoctorDtos {
             @NotBlank @Size(max = 255) String fullName,
             @NotNull @Min(12) @Max(60) Integer ageYears,
             @Min(1) @Max(20) Integer parity,
-            @NotNull LocalDate edd,
+            LocalDate edd,
             @DecimalMin("100") @DecimalMax("250") BigDecimal heightCm,
             @DecimalMin("30") @DecimalMax("250") BigDecimal prePregnancyWeightKg,
             RiskGroup riskGroup,
             DiabetesType diabetesType,
             Boolean diaryRequired,
             LocalTime reminderTime,
-            @Size(max = 4000) String comment
+            @Size(max = 4000) String comment,
+            EddMethod eddMethod,
+            LocalDate eddBasisDate,
+            @Min(21) @Max(35) Integer eddCycleLength
     ) {
     }
 
@@ -141,6 +145,9 @@ public final class DoctorDtos {
     }
 
     public record DoctorMessengerResponse(String url, boolean linked) {
+    }
+
+    public record DoctorMessengerStatus(boolean linked, Platform platform) {
     }
 
     public record DashboardView(
